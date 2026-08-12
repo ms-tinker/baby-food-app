@@ -1,0 +1,1586 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>食材 icon 預覽(本機快速預覽用)</title>
+<style>
+  :root {
+    --bg: #faf6ee; --card: #ffffff; --border: #e8ddc8; --text: #3a3226; --sub: #8a7d64; --accent: #d98a4a; --hl: #fff4d9; --hlborder:#e0a83a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1c1a16; --card:#26231d; --border:#3a352a; --text:#eee6d6; --sub:#a89a7c; --accent:#e0a468; --hl:#3a3218; --hlborder:#b8862a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:24px; background:var(--bg); color:var(--text); font-family:-apple-system,"PingFang TC","Helvetica Neue",sans-serif; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .hint { color:var(--sub); font-size:13px; margin-bottom:20px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
+  .card { position:relative; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px; display:flex; gap:12px; align-items:flex-start; }
+  .card.unused { opacity:.55; }
+  .card.just-changed { background:var(--hl); border:1.5px solid var(--hlborder); }
+  .card.shell-variant { flex-direction:column; align-items:center; text-align:center; padding:18px 12px; }
+  .badge { position:absolute; top:-9px; right:8px; background:var(--hlborder); color:#fff; font-size:10px; padding:2px 8px; border-radius:8px; font-weight:600; }
+  .icon { width:44px; height:44px; flex:0 0 auto; }
+  .icon.big { width:72px; height:72px; }
+  .icon-id { font-weight:600; font-size:13px; color:var(--accent); font-family:ui-monospace,monospace; }
+  .foods { font-size:12.5px; margin-top:4px; line-height:1.5; }
+  .count { font-size:11px; color:var(--sub); margin-top:4px; }
+  h2 { font-size:15px; margin:28px 0 10px; border-top:1px solid var(--border); padding-top:20px; }
+  .shell-section { background:var(--hl); border:1.5px solid var(--hlborder); border-radius:14px; padding:16px; margin-bottom:8px; }
+  .shell-section h2 { margin-top:0; border-top:none; padding-top:0; }
+  .shell-section .grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); }
+</style>
+</head>
+<body>
+<h1>🍼 食材 icon 快速預覽</h1>
+<div class="hint">本機檔案,不用透過 Artifact 發布 — 改完 icon 後直接重新整理這個頁面就能看到最新結果。確定要用的版本,我才會整合進正式的「寶寶副食品紀錄.html」並發布。</div>
+
+<svg style="display:none">
+<symbol id="ic-tab-calendar" viewBox="0 0 40 40">
+    <rect x="7" y="9" width="26" height="24" rx="5" fill="none" stroke="currentColor" stroke-width="2.4"/>
+    <path d="M7 16h26" stroke="currentColor" stroke-width="2.4"/>
+    <path d="M14 6v6M26 6v6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="14" cy="23" r="1.8" fill="currentColor" stroke="none"/>
+    <circle cx="20" cy="23" r="1.8" fill="currentColor" stroke="none"/>
+    <circle cx="26" cy="23" r="1.8" fill="currentColor" stroke="none"/>
+    <circle cx="14" cy="28" r="1.8" fill="currentColor" stroke="none"/>
+    <circle cx="20" cy="28" r="1.8" fill="currentColor" stroke="none"/>
+  </symbol>
+<symbol id="ic-tab-trial" viewBox="0 0 40 40">
+    <rect x="9" y="8" width="22" height="27" rx="4" fill="none" stroke="currentColor" stroke-width="2.4"/>
+    <rect x="15" y="5" width="10" height="6" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/>
+    <path d="M14 21l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M14 29h12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-tab-guide" viewBox="0 0 40 40">
+    <path d="M20 7c-6 0-10 4.5-10 10 0 4 2 6.5 4 8.5 1 1 1.5 2 1.5 3.5h9c0-1.5.5-2.5 1.5-3.5 2-2 4-4.5 4-8.5 0-5.5-4-10-10-10z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M16.5 33h7M17.5 36h5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M20 3v2M8 8l1.5 1.5M32 8l-1.5 1.5M5 19h2M33 19h2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-trash" viewBox="0 0 40 40">
+    <path d="M9 12h22" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M16 12V9.5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2V12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12.5 12l1.3 19a2 2 0 0 0 2 1.9h8.4a2 2 0 0 0 2-1.9l1.3-19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M17 17.5v10M23 17.5v10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-plus-circle" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width="2.4"/>
+    <path d="M20 13v14M13 20h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-edit-pencil" viewBox="0 0 40 40">
+    <path d="M25 8.5l6.5 6.5-16 16H9v-6.5z" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/>
+    <path d="M21.5 12l6.5 6.5" stroke="currentColor" stroke-width="2.1"/>
+  </symbol>
+<symbol id="ic-download" viewBox="0 0 40 40">
+    <path d="M20 6v20M13 19l7 7 7-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M9 28v4a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2v-4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-upload" viewBox="0 0 40 40">
+    <path d="M20 30V10M13 17l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M9 28v4a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2v-4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-move" viewBox="0 0 40 40">
+    <path d="M20 6v10M20 24v10M6 20h10M24 20h10" stroke="currentColor" stroke-width="0" fill="none"/>
+    <path d="M20 5l4 5h-8zM20 35l4-5h-8zM5 20l5-4v8zM35 20l-5-4v8z" fill="currentColor" stroke="none"/>
+    <path d="M20 12v16M12 20h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-dots-vertical" viewBox="0 0 40 40">
+    <circle cx="20" cy="10" r="2.6" fill="currentColor" stroke="none"/>
+    <circle cx="20" cy="20" r="2.6" fill="currentColor" stroke="none"/>
+    <circle cx="20" cy="30" r="2.6" fill="currentColor" stroke="none"/>
+  </symbol>
+<symbol id="ic-tab-dashboard" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="13" fill="none" stroke="currentColor" stroke-width="2.4"/>
+    <path d="M20 20V7a13 13 0 0 1 11.3 19.5z" fill="currentColor" opacity=".22" stroke="none"/>
+    <path d="M20 7v13l9 6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="ic-progress-rings" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width="2.2" opacity=".3"/>
+    <circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="60 95" transform="rotate(-90 20 20)"/>
+    <circle cx="20" cy="20" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2" opacity=".3"/>
+    <circle cx="20" cy="20" r="8.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="32 53" transform="rotate(-90 20 20)"/>
+  </symbol>
+<symbol id="ic-rice" viewBox="0 0 64 64">
+    <path d="M14 34c0 12 8 20 18 20s18-8 18-20" fill="none" stroke="#8a6a3f" stroke-width="3" stroke-linecap="round"/>
+    <path d="M12 34c0-2 1-3 3-3h34c2 0 3 1 3 3H12z" fill="#fef6e6" stroke="#c98a4b" stroke-width="3" stroke-linejoin="round"/>
+    <ellipse cx="24" cy="27" rx="4.2" ry="3" fill="#fffdf6" stroke="#e2c99a" stroke-width="2"/>
+    <ellipse cx="32" cy="23.5" rx="4.6" ry="3.2" fill="#fffdf6" stroke="#e2c99a" stroke-width="2"/>
+    <ellipse cx="40.5" cy="27" rx="4.2" ry="3" fill="#fffdf6" stroke="#e2c99a" stroke-width="2"/>
+  </symbol>
+<symbol id="ic-millet" viewBox="0 0 64 64">
+    <path d="M32 54V20" fill="none" stroke="#7a9a4e" stroke-width="3" stroke-linecap="round"/>
+    <path d="M32 20c8-6 8-14 4-18" fill="none" stroke="#7a9a4e" stroke-width="3" stroke-linecap="round"/>
+    <g fill="#e8b23d" stroke="#b98a24" stroke-width="1.4">
+      <ellipse cx="26" cy="16" rx="4.6" ry="3.4" transform="rotate(-25 26 16)"/>
+      <ellipse cx="38" cy="14" rx="4.6" ry="3.4" transform="rotate(20 38 14)"/>
+      <ellipse cx="23" cy="24" rx="4.6" ry="3.4" transform="rotate(-20 23 24)"/>
+      <ellipse cx="41" cy="23" rx="4.6" ry="3.4" transform="rotate(22 41 23)"/>
+      <ellipse cx="25" cy="32" rx="4.6" ry="3.4" transform="rotate(-22 25 32)"/>
+      <ellipse cx="39" cy="31" rx="4.6" ry="3.4" transform="rotate(18 39 31)"/>
+      <ellipse cx="28" cy="40" rx="4.4" ry="3.2" transform="rotate(-15 28 40)"/>
+      <ellipse cx="36" cy="39" rx="4.4" ry="3.2" transform="rotate(15 36 39)"/>
+    </g>
+  </symbol>
+<symbol id="ic-oat" viewBox="0 0 64 64">
+    <path d="M32 54V18" stroke="#8a9a5b" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M32 18c6-5 6-11 3-14" stroke="#8a9a5b" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <g fill="#e9dcae" stroke="#b7a468" stroke-width="1.4">
+      <ellipse cx="26" cy="22" rx="6" ry="3.2" transform="rotate(-30 26 22)"/>
+      <ellipse cx="38" cy="20" rx="6" ry="3.2" transform="rotate(28 38 20)"/>
+      <ellipse cx="24" cy="32" rx="6" ry="3.2" transform="rotate(-25 24 32)"/>
+      <ellipse cx="40" cy="30" rx="6" ry="3.2" transform="rotate(25 40 30)"/>
+      <ellipse cx="25" cy="42" rx="6" ry="3.2" transform="rotate(-22 25 42)"/>
+      <ellipse cx="39" cy="41" rx="6" ry="3.2" transform="rotate(22 39 41)"/>
+    </g>
+  </symbol>
+<symbol id="ic-sweetpotato" viewBox="0 0 64 64">
+    <path d="M20 20c-2-4 1-8 5-6 3-4 9-3 10 1 6-2 12 4 10 10-2 3-2 6-1 9 3 8-2 17-12 19-11 2-20-6-20-16 0-6 4-9 5-12 1-2 2-3 3-5z" fill="#a85a63" stroke="#7c3f47" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M27 15c2-3 6-4 9-2" fill="none" stroke="#7a9a4e" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="27" cy="34" rx="4" ry="6" fill="#c47b82" opacity=".55" transform="rotate(-20 27 34)"/>
+  </symbol>
+<symbol id="ic-pumpkin" viewBox="0 0 64 64">
+    <path d="M32 12c2-4 8-4 8 0-1 2-4 3-8 3z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="2.5"/>
+    <path d="M32 15c-13 0-21 9-21 21s9 17 21 17 21-6 21-17-8-21-21-21z" fill="#eb9a41" stroke="#c9761f" stroke-width="3"/>
+    <path d="M20 20c-4 6-4 24 0 30M32 16v37M44 20c4 6 4 24 0 30" fill="none" stroke="#c9761f" stroke-width="2.2" stroke-linecap="round" opacity=".7"/>
+  </symbol>
+<symbol id="ic-potato" viewBox="0 0 64 64">
+    <path d="M15 32c-2-7 3-13 10-13 2-5 9-7 13-3 6-1 12 4 11 10 4 3 5 10 1 14-2 6-9 9-16 8-9-1-14-6-17-13-1-1-2-2-2-3z" fill="#c79a63" stroke="#96703f" stroke-width="3" stroke-linejoin="round"/>
+    <ellipse cx="24" cy="30" rx="2.6" ry="2" fill="#7c5c33"/>
+    <ellipse cx="36" cy="36" rx="2.6" ry="2" fill="#7c5c33"/>
+    <ellipse cx="30" cy="24" rx="2.2" ry="1.7" fill="#7c5c33"/>
+  </symbol>
+<symbol id="ic-yam" viewBox="0 0 64 64">
+    <path d="M14 30c-2-6 3-11 9-9 4-8 16-8 19 1 7 0 11 7 8 13 4 5 2 13-5 16-9 4-20 1-24-8-4-3-6-8-4-13z" fill="#f1e6cf" stroke="#b79a63" stroke-width="3" stroke-linejoin="round"/>
+    <ellipse cx="22" cy="26" rx="2" ry="1.6" fill="#b79a63"/>
+    <ellipse cx="34" cy="20" rx="2" ry="1.6" fill="#b79a63"/>
+    <ellipse cx="40" cy="38" rx="2" ry="1.6" fill="#b79a63"/>
+    <ellipse cx="24" cy="40" rx="2" ry="1.6" fill="#b79a63"/>
+  </symbol>
+<symbol id="ic-bokchoy" viewBox="0 0 64 64">
+    <path d="M28 58c-1-7 0-11 4-13 4 2 5 6 4 13z" fill="#4a7a3a" stroke="#2f5626" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M32 46L32 30M32 46L23 33M32 46L41 33M32 46L15 41M32 46L49 41" stroke="#3a6b30" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+    <ellipse cx="32" cy="19" rx="7" ry="13" fill="#6aab52" stroke="#3a6b30" stroke-width="2.2"/>
+    <ellipse cx="19" cy="25" rx="6" ry="11" fill="#5c9a4a" stroke="#3a6b30" stroke-width="2.2" transform="rotate(-30 19 25)"/>
+    <ellipse cx="45" cy="25" rx="6" ry="11" fill="#7fbb5e" stroke="#3a6b30" stroke-width="2.2" transform="rotate(30 45 25)"/>
+    <ellipse cx="11" cy="35" rx="5" ry="9" fill="#4a8a3e" stroke="#3a6b30" stroke-width="2" transform="rotate(-52 11 35)"/>
+    <ellipse cx="53" cy="35" rx="5" ry="9" fill="#6aab52" stroke="#3a6b30" stroke-width="2" transform="rotate(52 53 35)"/>
+    <path d="M32 10v16M19 17c-2 4-2 8 0 13M45 17c2 4 2 8 0 13" stroke="#3a6b30" stroke-width="1.1" fill="none" opacity=".45"/>
+  </symbol>
+<symbol id="ic-spinach" viewBox="0 0 64 64">
+    <path d="M32 54V38" stroke="#a3453f" stroke-width="4" stroke-linecap="round"/>
+    <path d="M32 40c-10 2-16-4-18-14 10-2 17 4 18 14zM32 40c10 2 16-4 18-14-10-2-17 4-18 14zM32 38c-6-6-6-16 0-24 6 8 6 18 0 24z" fill="#4f7a45" stroke="#38592f" stroke-width="2.5" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="ic-cabbage" viewBox="0 0 64 64">
+    <circle cx="32" cy="34" r="20" fill="#cfe0a6" stroke="#8ba85a" stroke-width="3"/>
+    <path d="M32 34c-6-6-6-14 0-20M32 34c6-6 6-14 0-20M32 34c-8 2-14 8-14 14M32 34c8 2 14 8 14 14" fill="none" stroke="#8ba85a" stroke-width="2.4" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-waterspinach" viewBox="0 0 64 64">
+    <path d="M24 56V26M32 56V18M40 56V26" stroke="#5f8a3d" stroke-width="3.4" stroke-linecap="round" fill="none"/>
+    <path d="M32 18c-6-4-8-3-8-3s2 6 8 7c6-1 8-7 8-7s-2-1-8 3z" fill="#7fa851" stroke="#5f8a3d" stroke-width="2"/>
+    <path d="M24 26c-4-3-6-2-6-2s1 4 6 5M40 26c4-3 6-2 6-2s-1 4-6 5" fill="#7fa851" stroke="#5f8a3d" stroke-width="1.8"/>
+  </symbol>
+<symbol id="ic-cucumber" viewBox="0 0 64 64">
+    <path d="M12 32c0-8 8-14 20-14s20 6 20 14-8 14-20 14-20-6-20-14z" fill="#8bb552" stroke="#5c8a34" stroke-width="3" transform="rotate(-18 32 32)"/>
+    <g stroke="#5c8a34" stroke-width="1.6" transform="rotate(-18 32 32)">
+      <line x1="18" y1="26" x2="18" y2="38"/><line x1="26" y1="23" x2="26" y2="41"/>
+      <line x1="34" y1="22" x2="34" y2="42"/><line x1="42" y1="24" x2="42" y2="40"/>
+    </g>
+  </symbol>
+<symbol id="ic-eggplant" viewBox="0 0 64 64">
+    <path d="M30 14c3-3 8-1 7 3-1 3-4 3-4 3s10 2 12 14c2 12-6 22-15 22s-15-9-14-20c1-10 8-15 8-15s-2-4 1-6z" fill="#7a5a92" stroke="#54396b" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M27 18c2-2 8-2 10 0" fill="none" stroke="#5f8a3d" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="26" cy="30" rx="3" ry="6" fill="#9678ac" opacity=".6" transform="rotate(-20 26 30)"/>
+  </symbol>
+<symbol id="ic-okra" viewBox="0 0 64 64">
+    <path d="M20 14c14 4 24 18 26 34 1 6-2 9-6 8-14-4-24-20-26-36-1-4 2-7 6-6z" fill="#7fa851" stroke="#527431" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M24 20c8 6 14 16 16 28M20 26c6 6 12 14 14 24" stroke="#527431" stroke-width="1.6" fill="none"/>
+  </symbol>
+<symbol id="ic-food-generic" viewBox="0 0 64 64">
+    <circle cx="32" cy="32" r="20" fill="#f0dfc3" stroke="#c98a4b" stroke-width="3"/>
+    <path d="M24 32h16M32 24v16" stroke="#c98a4b" stroke-width="3" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-generic-grain" viewBox="0 0 64 64">
+    <path d="M32 54V22" stroke="#8a9a5b" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M32 30c-6-2-10-8-9-14 6 0 11 5 11 11M32 30c6-2 10-8 9-14-6 0-11 5-11 11M32 22c-4-2-7-6-6-11 5 0 8 3 9 8M32 22c4-2 7-6 6-11-5 0-8 3-9 8" fill="#e8c56a" stroke="#b98a24" stroke-width="2" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="ic-generic-root" viewBox="0 0 64 64">
+    <path d="M26 12c4-2 10 0 10 5 5 1 8 6 6 11 4 3 4 9 0 13-8 10-22 8-26-3-3-8 1-16 8-19-1-3 0-6 2-7z" fill="#d4a86a" stroke="#a5763f" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M30 12c1-3 4-5 6-4" stroke="#7a9a4e" stroke-width="3" stroke-linecap="round" fill="none"/>
+  </symbol>
+<symbol id="ic-generic-bean" viewBox="0 0 64 64">
+    <path d="M18 26c8-6 18-2 20 8 2 8-4 16-14 16-8 0-14-6-14-14 0-4 2-7 8-10z" fill="#8a3a2a" stroke="#5c2318" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M38 22c8-4 17 1 18 10 1 8-6 15-15 14-7-1-12-7-11-14 1-5 4-8 8-10z" fill="#a3492f" stroke="#5c2318" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M22 42c7-5 16-3 19 5 3 7-2 14-10 15-7 1-13-3-15-9-1-5 1-9 6-11z" fill="#8a3a2a" stroke="#5c2318" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M22 30c3-2 6-2 9 0M42 26c3-1 6-1 8 1M27 46c3-2 6-2 9 0" stroke="#f0dfc3" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-generic-leaf" viewBox="0 0 64 64">
+    <path d="M32 12c14 4 20 16 16 30-14 4-26-2-30-16-3-10 4-14 14-14z" fill="#7fa851" stroke="#527431" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M32 16c0 12 4 20 12 26" stroke="#527431" stroke-width="2" fill="none"/>
+  </symbol>
+<symbol id="ic-generic-fruitveg" viewBox="0 0 64 64">
+    <rect x="29" y="8" width="6" height="7" rx="2" fill="#8a6a3f" stroke="#5c3f22" stroke-width="1.6"/>
+    <path d="M32 16c11 0 18 9 17 19-1 10-9 18-17 18s-16-8-17-18c-1-10 6-19 17-19z" fill="#8bb552" stroke="#5c8a34" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M24 22c2 8 2 16 0 24M40 22c-2 8-2 16 0 24" stroke="#5c8a34" stroke-width="1.6" fill="none" opacity=".5"/>
+  </symbol>
+<symbol id="ic-generic-herb" viewBox="0 0 64 64">
+    <path d="M32 54V16" stroke="#5f8a3d" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M32 22c-6-4-12-2-14 2 5 4 11 3 14-2zM32 30c6-4 12-2 14 2-5 4-11 3-14-2zM32 38c-6-4-12-2-14 2 5 4 11 3 14-2z" fill="#7fa851" stroke="#527431" stroke-width="1.8" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="ic-generic-mushroom" viewBox="0 0 64 64">
+    <path d="M14 30c0-11 8-18 18-18s18 7 18 18c0 3-2 4-5 4H19c-3 0-5-1-5-4z" fill="#c79a63" stroke="#8a6a3f" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M24 34v14c0 3 3 5 8 5s8-2 8-5V34" fill="#f1e6cf" stroke="#b79a63" stroke-width="3" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="ic-generic-seaweed" viewBox="0 0 64 64">
+    <path d="M20 54c-4-14 4-16 0-28s6-16 2-22" stroke="#3d6b4f" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <path d="M32 54c-4-16 5-18 0-30s6-14 3-20" stroke="#4f8a63" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <path d="M44 54c-4-14 4-16 0-28s6-16 2-22" stroke="#3d6b4f" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  </symbol>
+<symbol id="ic-generic-fruit" viewBox="0 0 64 64">
+    <path d="M31 14c1-3 5-4 7-2-2 3-4 4-7 2z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="2"/>
+    <path d="M32 16v4" stroke="#8a6a3f" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="32" cy="38" r="19" fill="#e0605a" stroke="#a83f3a" stroke-width="3"/>
+    <path d="M24 30c2 3 4 4 7 4" stroke="#a83f3a" stroke-width="2" fill="none" stroke-linecap="round" opacity=".5"/>
+  </symbol>
+<symbol id="ic-generic-meat" viewBox="0 0 64 64">
+    <path d="M14 34c-2-9 3-17 12-19 9-3 19 1 22 10 3 9-1 18-10 21-5 8-15 11-21 5-6-5-6-12-3-17z" fill="#eb9a55" stroke="#8a5a2a" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="36" cy="28" r="11" fill="#d9453a" stroke="#8a5a2a" stroke-width="2.8"/>
+    <path d="M31 23c2 2 2 7 0 9M41 22c2 3 2 8 0 10" stroke="#a8302a" stroke-width="1.4" fill="none" opacity=".6"/>
+    <path d="M45 28h11" stroke="#f1ede4" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="58" cy="24" r="4" fill="#f1ede4" stroke="#8a5a2a" stroke-width="2.2"/>
+    <circle cx="58" cy="32" r="4" fill="#f1ede4" stroke="#8a5a2a" stroke-width="2.2"/>
+    <path d="M12 42l-7 7" stroke="#f1ede4" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="7" cy="46" r="2.6" fill="#f1ede4" stroke="#8a5a2a" stroke-width="1.8"/>
+  </symbol>
+<symbol id="ic-generic-fish" viewBox="0 0 64 64">
+    <path d="M8 32c7-9 18-13 28-11-2 4-2 7 0 11-2 4-2 7 0 11-10 2-21-2-28-11z" fill="#8bb0c9" stroke="#4f7a94" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M36 22l14-10-4 20 4 20-14-10" fill="#8bb0c9" stroke="#4f7a94" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="16" cy="30" r="2" fill="#4f7a94" stroke="none"/>
+  </symbol>
+<symbol id="ic-generic-seafood" viewBox="0 0 64 64">
+    <path d="M16 20c14-6 28 0 30 14 2 12-6 22-18 22-4 0-7-2-8-5 8 0 14-6 13-14-1-8-9-13-17-11-2-3-2-5 0-6z" fill="#eb8a4a" stroke="#b0532a" stroke-width="2.8" stroke-linejoin="round"/>
+    <circle cx="19" cy="22" r="2.2" fill="#5c2318" stroke="none"/>
+    <path d="M17 18c-4-6-4-12-1-17" stroke="#b0532a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M12 24l-7-1M13 29l-7 2M16 34l-6 4" stroke="#b0532a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M28 18c2 4 2 8 0 12M36 22c2 4 2 8 0 12" stroke="#b0532a" stroke-width="1.4" fill="none" opacity=".55"/>
+    <path d="M28 50c-2 4-1 8 2 10 3-1 5-4 5-8-3 0-5-1-7-2z" fill="#eb8a4a" stroke="#b0532a" stroke-width="2.4" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="ic-generic-dairy" viewBox="0 0 64 64">
+    <path d="M32 12c8 8 14 20 14 28a14 14 0 1 1-28 0c0-8 6-20 14-28z" fill="#fdf6e3" stroke="#c9b98a" stroke-width="3" stroke-linejoin="round"/>
+    <ellipse cx="27" cy="34" rx="3" ry="5" fill="#fff" opacity=".7"/>
+  </symbol>
+<symbol id="ic-generic-oil" viewBox="0 0 64 64">
+    <path d="M26 14h12v8l6 8v20a4 4 0 0 1-4 4H24a4 4 0 0 1-4-4V30l6-8z" fill="#e8c56a" stroke="#b98a24" stroke-width="3" stroke-linejoin="round"/>
+    <rect x="26" y="10" width="12" height="6" rx="1.5" fill="#b98a24" stroke="none"/>
+  </symbol>
+<symbol id="ic-b-rice" viewBox="0 0 64 64">
+    <ellipse cx="22" cy="30" rx="7" ry="4.4" fill="#efe3c8" stroke="#b7a468" stroke-width="2" transform="rotate(-15 22 30)"/>
+    <ellipse cx="34" cy="24" rx="7" ry="4.4" fill="#d9b877" stroke="#a5793f" stroke-width="2" transform="rotate(10 34 24)"/>
+    <ellipse cx="30" cy="38" rx="7" ry="4.4" fill="#8a6a3f" stroke="#5c3f22" stroke-width="2" transform="rotate(-8 30 38)"/>
+    <ellipse cx="44" cy="34" rx="7" ry="4.4" fill="#c79a63" stroke="#8a6a3f" stroke-width="2" transform="rotate(18 44 34)"/>
+  </symbol>
+<symbol id="ic-b-flour" viewBox="0 0 64 64">
+    <path d="M14 32c0 12 8 20 18 20s18-8 18-20" fill="none" stroke="#c9b98a" stroke-width="3" stroke-linecap="round"/>
+    <path d="M12 32c0-2 1-3 3-3h34c2 0 3 1 3 3H12z" fill="#faf6ea" stroke="#c9b98a" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M22 26c2-4 6-6 10-6s8 2 10 6" fill="#fffdf8" stroke="#e2d9bf" stroke-width="2"/>
+  </symbol>
+<symbol id="ic-b-longroot" viewBox="0 0 64 64">
+    <path d="M14 46c-4-14 4-28 20-34 12-4 20 2 18 10-2 6-10 8-18 12-10 5-16 12-20 12z" fill="#d4b483" stroke="#a5763f" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M20 40c6-10 14-16 24-20" stroke="#a5763f" stroke-width="1.6" fill="none" opacity=".6"/>
+  </symbol>
+<symbol id="ic-b-radish" viewBox="0 0 64 64">
+    <path d="M24 14c2-3 8-3 10 0l4 8c2 10 0 22-8 30-8-8-10-20-8-30z" fill="#e0745a" stroke="#a84f3a" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M28 14c0-4 2-8 2-8M32 14c0-4 2-8 2-8" stroke="#5f8a3d" stroke-width="3" stroke-linecap="round" fill="none"/>
+  </symbol>
+<symbol id="ic-b-seed" viewBox="0 0 64 64">
+    <path d="M32 12c10 0 16 8 16 18s-6 20-16 20-16-10-16-20 6-18 16-18z" fill="#c79a63" stroke="#8a6a3f" stroke-width="3"/>
+    <path d="M32 12c3-4 8-5 10-2" stroke="#5f8a3d" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-b-nut" viewBox="0 0 64 64">
+    <path d="M18 20l6-4 5 5-16 30-8-4z" fill="#e8cf9a" stroke="#8a6a3f" stroke-width="2.2" stroke-linejoin="round"/>
+    <ellipse cx="30" cy="40" rx="9" ry="17" fill="#c79a63" stroke="#8a6a3f" stroke-width="2.6" transform="rotate(-18 30 40)"/>
+    <ellipse cx="44" cy="42" rx="8" ry="16" fill="#d9b877" stroke="#8a6a3f" stroke-width="2.6" transform="rotate(10 44 42)"/>
+    <path d="M27 32c1 6 1 12 0 18M41 34c1 6 1 11 0 16" stroke="#8a6a3f" stroke-width="1.4" fill="none" opacity=".6"/>
+    <circle cx="26" cy="30" r="1" fill="#8a6a3f" stroke="none"/>
+    <circle cx="33" cy="44" r="1" fill="#8a6a3f" stroke="none"/>
+    <circle cx="42" cy="34" r="1" fill="#8a6a3f" stroke="none"/>
+  </symbol>
+<symbol id="ic-b-cabbage" viewBox="0 0 64 64">
+    <circle cx="24" cy="26" r="10" fill="#8ba85a" stroke="#5c7a37" stroke-width="2.5"/>
+    <circle cx="38" cy="22" r="8" fill="#9bbf68" stroke="#5c7a37" stroke-width="2.5"/>
+    <circle cx="34" cy="34" r="9" fill="#8ba85a" stroke="#5c7a37" stroke-width="2.5"/>
+    <path d="M32 42v14" stroke="#5c7a37" stroke-width="3" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-b-whiteleaf" viewBox="0 0 64 64">
+    <path d="M32 54V24" stroke="#dce8c4" stroke-width="6" stroke-linecap="round"/>
+    <path d="M20 54V30M44 54V30" stroke="#eef3df" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <path d="M32 24c-3-6-2-12 2-16 4 4 3 12-2 16zM20 25c-4-5-4-11-1-15 5 3 6 10 1 15zM44 25c4-5 4-11 1-15-5 3-6 10-1 15z" fill="#7fa851" stroke="#527431" stroke-width="2"/>
+  </symbol>
+<symbol id="ic-b-wildleaf" viewBox="0 0 64 64">
+    <path d="M32 54V20" stroke="#5f8a3d" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M32 22c-8-2-12-8-11-14 7 1 12 7 11 14zM32 30c8-2 12-8 11-14-7 1-12 7-11 14zM32 38c-8-2-12-8-11-14 7 1 12 7 11 14z" fill="#8bb552" stroke="#5c8a34" stroke-width="1.8" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="ic-b-melon" viewBox="0 0 64 64">
+    <path d="M30 10c2-2 4-2 4 1-1 2-2 3-4 2z" fill="#5c8a34" stroke="#3e5c22" stroke-width="2"/>
+    <path d="M28 14c-10 8-16 22-14 34 1 8 8 14 16 14s15-6 16-14c2-12-4-26-14-34-1-1-3-1-4 0z" fill="#a8c96a" stroke="#7a9a4e" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M28 20c-4 10-6 20-4 34" stroke="#7a9a4e" stroke-width="1.6" fill="none" opacity=".5"/>
+  </symbol>
+<symbol id="ic-b-sprout" viewBox="0 0 64 64">
+    <path d="M20 54c0-16 4-24 2-34M32 54c0-18 2-28 0-36M44 54c0-16-4-24-2-34" stroke="#8bb552" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <circle cx="22" cy="18" r="4" fill="#e8dfa0" stroke="#b7a468" stroke-width="1.6"/>
+    <circle cx="32" cy="16" r="4" fill="#e8dfa0" stroke="#b7a468" stroke-width="1.6"/>
+    <circle cx="42" cy="18" r="4" fill="#e8dfa0" stroke="#b7a468" stroke-width="1.6"/>
+  </symbol>
+<symbol id="ic-b-allium" viewBox="0 0 64 64">
+    <path d="M14 50V32M20 50V28" stroke="#7fa851" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <path d="M11 32c0-5 2-9 6-9s6 4 6 9c0 3-3 5-6 5s-6-2-6-5z" fill="#f1e6cf" stroke="#c9b98a" stroke-width="2.2" stroke-linejoin="round"/>
+    <ellipse cx="34" cy="46" rx="12" ry="10" fill="#f3ecd8" stroke="#c9b98a" stroke-width="2.6"/>
+    <path d="M26 40c2-3 5-4 8-4M26 48c2 2 5 3 8 3M34 36v20M42 40c-2-3-5-4-8-4M42 48c-2 2-5 3-8 3" stroke="#c9b98a" stroke-width="1.3" fill="none"/>
+    <path d="M42 12c3 1 5 4 5 8-1 6-6 12-12 16-2-6 0-13 4-18 1-2 2-4 3-6z" fill="#d9453a" stroke="#a3302a" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M40 12c1-2 3-3 5-2" stroke="#5f8a3d" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-b-celery" viewBox="0 0 64 64">
+    <path d="M24 54V26M32 54V22M40 54V26" stroke="#a8c26a" stroke-width="4" stroke-linecap="round"/>
+    <path d="M32 22c-2-4-1-8 2-10 2 3 1 7-2 10zM24 26c-2-4-1-7 1-9 2 2 1 6-1 9zM40 26c2-4 1-7-1-9-2 2-1 6 1 9z" fill="#c7dba0" stroke="#7a9a4e" stroke-width="1.8"/>
+  </symbol>
+<symbol id="ic-b-mushroomcluster" viewBox="0 0 64 64">
+    <path d="M18 44V32c0-5 4-9 8-9s8 4 8 9v12" fill="#f1e6cf" stroke="#b79a63" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M14 32c0-6 5-10 12-10s12 4 12 10" fill="none" stroke="#c79a63" stroke-width="2.5"/>
+    <path d="M32 48V36c0-4 3-8 7-8s7 4 7 8v12" fill="#f1e6cf" stroke="#b79a63" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M28 36c0-5 5-9 11-9s11 4 11 9" fill="none" stroke="#c79a63" stroke-width="2.5"/>
+  </symbol>
+<symbol id="ic-b-seaflat" viewBox="0 0 64 64">
+    <path d="M14 20c10-4 20 2 16 12-4 10 4 16 14 12s16 6 12 14" fill="none" stroke="#3d6b4f" stroke-width="6" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-b-pome" viewBox="0 0 64 64">
+    <path d="M30 16c1-3 5-4 7-2-2 3-4 4-7 2z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="2"/>
+    <circle cx="32" cy="38" r="18" fill="#e8b3a0" stroke="#c47b63" stroke-width="3"/>
+    <path d="M25 30c2 3 4 4 7 4" stroke="#c47b63" stroke-width="2" fill="none" opacity=".5"/>
+  </symbol>
+<symbol id="ic-b-citrus" viewBox="0 0 64 64">
+    <circle cx="32" cy="34" r="19" fill="#f0a84a" stroke="#c9761f" stroke-width="3"/>
+    <path d="M32 34V15M32 34l16-9M32 34l16 9M32 34l-16 9M32 34l-16-9" stroke="#c9761f" stroke-width="1.4" opacity=".55"/>
+    <path d="M28 15c1-3 4-4 6-2" stroke="#7a9a4e" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-b-berry" viewBox="0 0 64 64">
+    <circle cx="24" cy="30" r="9" fill="#7a5a92" stroke="#54396b" stroke-width="2.4"/>
+    <circle cx="38" cy="28" r="8" fill="#8a6aa2" stroke="#54396b" stroke-width="2.4"/>
+    <circle cx="30" cy="42" r="9" fill="#7a5a92" stroke="#54396b" stroke-width="2.4"/>
+    <path d="M30 20c1-3 4-4 6-2" stroke="#5f8a3d" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-b-melonfruit" viewBox="0 0 64 64">
+    <circle cx="32" cy="34" r="19" fill="#8bb552" stroke="#5c8a34" stroke-width="3"/>
+    <path d="M18 26c8 6 20 6 28 0M16 34h32M18 42c8-6 20-6 28 0" stroke="#5c8a34" stroke-width="1.4" fill="none" opacity=".5"/>
+  </symbol>
+<symbol id="ic-b-otherfruit" viewBox="0 0 64 64">
+    <circle cx="32" cy="35" r="18" fill="#c3d67a" stroke="#889a4a" stroke-width="3"/>
+    <path d="M29 17c1-3 5-4 7-2-2 3-4 4-7 2z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="2"/>
+    <circle cx="32" cy="35" r="5" fill="#e8dfa0" opacity=".6" stroke="none"/>
+  </symbol>
+<symbol id="ic-b-fishflat" viewBox="0 0 64 64">
+    <path d="M8 32c6-6 14-9 24-9 14 0 24 4 24 9s-10 9-24 9c-10 0-18-3-24-9z" fill="#a8c4d6" stroke="#4f7a94" stroke-width="3"/>
+    <circle cx="16" cy="32" r="1.8" fill="#4f7a94" stroke="none"/>
+    <path d="M20 26c8 4 16 4 24 0M20 38c8-4 16-4 24 0" stroke="#4f7a94" stroke-width="1.2" fill="none" opacity=".5"/>
+  </symbol>
+<symbol id="ic-b-fishsmall" viewBox="0 0 64 64">
+    <circle cx="22" cy="24" r="6" fill="#eb9a41" stroke="#c9761f" stroke-width="2"/>
+    <circle cx="36" cy="20" r="5" fill="#f0a84a" stroke="#c9761f" stroke-width="2"/>
+    <circle cx="28" cy="36" r="6" fill="#eb9a41" stroke="#c9761f" stroke-width="2"/>
+    <circle cx="42" cy="34" r="5" fill="#f0a84a" stroke="#c9761f" stroke-width="2"/>
+    <circle cx="20" cy="44" r="4.5" fill="#eb9a41" stroke="#c9761f" stroke-width="2"/>
+  </symbol>
+<symbol id="ic-b-shell" viewBox="0 0 64 64">
+    <path d="M32 13.3C46.4 15 55.4 25.9 54.5 38.5C54.5 45.6 50 51 43.8 51H20.3C14 51 9.5 45.6 9.5 38.5C8.6 25.9 17.6 15 32 13.3Z" fill="#e8ddc8" stroke="#a5854f" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M32 14.5C42.4 14.5 48.9 22.4 48.3 31.4C48.3 36.6 45 40.4 40.5 40.4H23.5C19 40.4 15.8 36.6 15.8 31.4C15.1 22.4 21.5 14.5 32 14.5Z" fill="none" stroke="#a5854f" stroke-width="1.6" opacity=".65"/>
+    <path d="M32 14C38.6 14 42.8 19 42.4 24.9C42.4 28.1 40.3 30.6 37.4 30.6H26.6C23.8 30.6 21.6 28.1 21.6 24.9C21.3 19 25.4 14 32 14Z" fill="none" stroke="#a5854f" stroke-width="1.4" opacity=".6"/>
+    <path d="M32 13.6C35.1 13.6 37.1 16 37 18.8C37 20.4 36 21.5 34.6 21.5H29.4C28 21.5 27 20.4 27 18.8C26.9 16 28.9 13.6 32 13.6Z" fill="none" stroke="#a5854f" stroke-width="1.2" opacity=".55"/>
+  </symbol>
+<symbol id="ic-b-softbody" viewBox="0 0 64 64">
+    <path d="M32 10c11 0 18 8 18 17 0 5-2 8-4 11 3 2 5 4 5 7-3 1-6 0-8-2 0 3-1 6-3 8-2-2-3-5-3-8-1 3-2 6-4 8-2-2-3-5-3-8-2 3-3 6-5 8-2-2-3-5-3-8-2 2-5 3-8 2 0-3 2-5 5-7-2-3-4-6-4-11 0-9 7-17 18-17z" fill="#c9a0d9" stroke="#8a5aa0" stroke-width="2.8" stroke-linejoin="round"/>
+    <circle cx="26" cy="24" r="2.4" fill="#4a2e5c" stroke="none"/>
+    <circle cx="38" cy="24" r="2.4" fill="#4a2e5c" stroke="none"/>
+  </symbol>
+<symbol id="ic-b-dairycarton" viewBox="0 0 64 64">
+    <path d="M28 10h8v8c6 3 8 7 8 12v20a4 4 0 0 1-4 4H24a4 4 0 0 1-4-4V30c0-5 2-9 8-12z" fill="#fdf6e3" stroke="#c9b98a" stroke-width="3" stroke-linejoin="round"/>
+    <rect x="26" y="8" width="12" height="5" rx="1.5" fill="#c9b98a" stroke="none"/>
+    <rect x="22" y="36" width="20" height="10" fill="#e8c56a" opacity=".5" stroke="none"/>
+  </symbol>
+<symbol id="ic-b-fat" viewBox="0 0 64 64">
+    <rect x="18" y="10" width="28" height="8" rx="2" fill="#c9b98a" stroke="#a5793f" stroke-width="2.5"/>
+    <path d="M20 18h24v28a6 6 0 0 1-6 6H26a6 6 0 0 1-6-6V18z" fill="#fdf6e3" stroke="#c9b98a" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M24 26c4 3 12 3 16 0" stroke="#e8dfc0" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <path d="M24 34c4 3 12 3 16 0" stroke="#e8dfc0" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-b-crab" viewBox="0 0 64 64">
+    <ellipse cx="32" cy="32" rx="16" ry="12" fill="#e0745a" stroke="#a84f3a" stroke-width="3"/>
+    <circle cx="24" cy="20" r="3" fill="#fff" stroke="#a84f3a" stroke-width="1.6"/>
+    <circle cx="40" cy="20" r="3" fill="#fff" stroke="#a84f3a" stroke-width="1.6"/>
+    <path d="M24 20v-4M40 20v-4" stroke="#a84f3a" stroke-width="2" stroke-linecap="round"/>
+    <path d="M12 24c-6-2-10-8-8-12 5 0 10 4 12 9M52 24c6-2 10-8 8-12-5 0-10 4-12 9" fill="#e0745a" stroke="#a84f3a" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M14 34l-8 2M16 40l-7 4M48 40l7 4M50 34l8 2" stroke="#a84f3a" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+  </symbol>
+<symbol id="ic-b-egg" viewBox="0 0 64 64">
+    <path d="M40 14c8 6 14 18 14 26a13 13 0 1 1-26 0c0-8 6-20 14-26z" fill="#f1ede4" stroke="#c2b394" stroke-width="3" stroke-linejoin="round"/>
+    <ellipse cx="35" cy="26" rx="3" ry="4" fill="#fff" opacity=".7"/>
+    <path d="M24 18c7 6 12 16 12 24a12 12 0 1 1-24 0c0-8 5-18 12-24z" fill="#fdf6e3" stroke="#c2b394" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="24" cy="42" r="8" fill="#f0c93a" stroke="#c9761f" stroke-width="2.6"/>
+  </symbol>
+<symbol id="ic-b-tofu" viewBox="0 0 64 64">
+    <path d="M14 24l18-8 18 8-18 8z" fill="#fdfaf0" stroke="#c9b98a" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M14 24v18l18 8V32z" fill="#f3ecd8" stroke="#c9b98a" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M50 24v18l-18 8V32z" fill="#fffefa" stroke="#c9b98a" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M32 32v18M20 36l6 3M38 36l-6 3" stroke="#c9b98a" stroke-width="1.2" fill="none" opacity=".6"/>
+  </symbol>
+<symbol id="ic-fr-apple" viewBox="0 0 64 64">
+    <path d="M30 16c1-3 5-4 7-2-2 3-4 4-7 2z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="2"/>
+    <path d="M32 18v4" stroke="#8a6a3f" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M32 22c10 0 18 8 18 18a18 18 0 0 1-36 0c0-10 8-18 18-18z" fill="#d94f3f" stroke="#a83a2e" stroke-width="3"/>
+    <path d="M24 30c2 3 4 4 7 4" stroke="#a83a2e" stroke-width="2" fill="none" opacity=".5"/>
+  </symbol>
+<symbol id="ic-fr-pear" viewBox="0 0 64 64">
+    <path d="M30 14c1-3 4-4 6-2-1 3-3 4-6 2z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="2"/>
+    <path d="M32 16c3 4 4 8 3 12 9 2 15 10 15 19 0 10-9 17-18 17s-18-7-18-17c0-9 6-17 15-19-1-4 0-8 3-12z" fill="#d4c96a" stroke="#a5983f" stroke-width="3" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="ic-fr-peachwhite" viewBox="0 0 64 64">
+    <path d="M30 14c1-2 3-3 5-2-1 2-2 3-5 2z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="2"/>
+    <path d="M32 18c11 0 19 9 18 19-1 11-9 19-18 19s-17-8-18-19c-1-10 7-19 18-19z" fill="#f5e3dc" stroke="#d4a89a" stroke-width="3"/>
+    <path d="M32 18c-4 8-4 15 0 22" stroke="#d4a89a" stroke-width="2" fill="none"/>
+  </symbol>
+<symbol id="ic-fr-peachyellow" viewBox="0 0 64 64">
+    <path d="M30 14c1-2 3-3 5-2-1 2-2 3-5 2z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="2"/>
+    <path d="M32 18c11 0 19 9 18 19-1 11-9 19-18 19s-17-8-18-19c-1-10 7-19 18-19z" fill="#f0a84a" stroke="#c9761f" stroke-width="3"/>
+    <path d="M32 18c-4 8-4 15 0 22" stroke="#c9761f" stroke-width="2" fill="none"/>
+  </symbol>
+<symbol id="ic-fr-plum" viewBox="0 0 64 64">
+    <path d="M30 16c1-2 3-3 5-2-1 2-2 3-5 2z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="2"/>
+    <circle cx="32" cy="38" r="18" fill="#7a5a92" stroke="#54396b" stroke-width="3"/>
+    <path d="M32 20c-3 6-3 10 0 16" stroke="#54396b" stroke-width="1.6" fill="none" opacity=".5"/>
+    <ellipse cx="26" cy="30" rx="4" ry="6" fill="#fff" opacity=".25"/>
+  </symbol>
+<symbol id="ic-fr-ume" viewBox="0 0 64 64">
+    <path d="M30 16c1-2 3-3 5-2-1 2-2 3-5 2z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="2"/>
+    <circle cx="32" cy="38" r="17" fill="#c3d67a" stroke="#889a4a" stroke-width="3"/>
+    <path d="M32 21c-3 6-3 10 0 16" stroke="#889a4a" stroke-width="1.6" fill="none" opacity=".5"/>
+  </symbol>
+<symbol id="ic-fr-jujube" viewBox="0 0 64 64">
+    <path d="M30 14c1-2 3-3 5-2-1 2-2 3-5 2z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="2"/>
+    <ellipse cx="32" cy="38" rx="13" ry="20" fill="#c3a24a" stroke="#8a6a2c" stroke-width="3"/>
+    <ellipse cx="27" cy="28" rx="3" ry="5" fill="#fff" opacity=".25"/>
+  </symbol>
+<symbol id="ic-fr-reddate" viewBox="0 0 64 64">
+    <ellipse cx="32" cy="34" rx="13" ry="20" fill="#a8543a" stroke="#6b3320" stroke-width="3"/>
+    <path d="M24 20c1 10-1 20 0 28M32 16c1 12-1 24 0 32M40 20c-1 10 1 20 0 28" stroke="#6b3320" stroke-width="1.4" fill="none" opacity=".5"/>
+  </symbol>
+<symbol id="ic-fr-loquat" viewBox="0 0 64 64">
+    <path d="M20 14c6-2 12 2 12 8s-6 8-12 8" fill="none" stroke="#5c7a37" stroke-width="2.4" stroke-linecap="round"/>
+    <ellipse cx="24" cy="34" rx="9" ry="11" fill="#f0a84a" stroke="#c9761f" stroke-width="2.6"/>
+    <ellipse cx="40" cy="40" rx="9" ry="11" fill="#eb9a41" stroke="#c9761f" stroke-width="2.6"/>
+    <ellipse cx="34" cy="24" rx="8" ry="10" fill="#f0a84a" stroke="#c9761f" stroke-width="2.6"/>
+  </symbol>
+<symbol id="ic-fr-honeypeach" viewBox="0 0 64 64">
+    <path d="M30 14c1-2 3-3 5-2-1 2-2 3-5 2z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="2"/>
+    <path d="M32 18c11 0 19 9 18 19-1 11-9 19-18 19s-17-8-18-19c-1-10 7-19 18-19z" fill="#eb8a7a" stroke="#c05a48" stroke-width="3"/>
+    <path d="M32 18c-4 8-4 15 0 22" stroke="#c05a48" stroke-width="2" fill="none"/>
+  </symbol>
+<symbol id="ic-fr-banana" viewBox="0 0 64 64">
+    <path d="M30 12c2 2 3 4 3 4l4-2s-1-3-3-5z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M31 16c-6 4-9 12-9 22 0 12 6 20 12 20 4 0 7-3 8-8-6 0-10-6-10-16 0-8 2-14 6-18-2-1-5-1-7 0z" fill="#f0d24a" stroke="#c9a11f" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M31 16c-6 5-8 13-7 23 0 11 5 19 11 20 4 1 7-2 8-7-6 1-11-5-12-15-1-9 1-16 5-21-2-1-4-1-5 0z" fill="#f5db6a" stroke="#c9a11f" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M36 15c-5 6-7 14-5 24 2 11 8 18 14 18 4 0 6-4 6-9-6 2-12-4-14-14-2-9-1-16 2-21-1-1-2-1-3 0z" fill="#f0d24a" stroke="#c9a11f" stroke-width="2.6" stroke-linejoin="round"/>
+    <circle cx="46" cy="46" r="2" fill="#8a6a3f" stroke="none"/>
+    <circle cx="34" cy="50" r="2" fill="#8a6a3f" stroke="none"/>
+    <circle cx="26" cy="44" r="2" fill="#8a6a3f" stroke="none"/>
+  </symbol>
+<symbol id="ic-fr-mango" viewBox="0 0 64 64">
+    <path d="M30 14c1-2 3-3 5-2-1 2-2 3-5 2z" fill="#5c7a37" stroke="#3e5624" stroke-width="2"/>
+    <path d="M32 18c12 2 20 12 18 24-2 11-11 18-18 18s-16-7-18-18c-2-12 6-22 18-24z" fill="#eb9a41" stroke="#c9761f" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M26 24c6 2 10 8 10 16" stroke="#c94f3f" stroke-width="1.8" fill="none" opacity=".5"/>
+  </symbol>
+<symbol id="ic-fr-pineapple" viewBox="0 0 64 64">
+    <path d="M32 6l3 8-3 4-3-4zM24 8l4 8-2 5-5-3zM40 8l-4 8 2 5 5-3zM18 14l6 6-1 5-6-2zM46 14l-6 6 1 5 6-2z" fill="#5c9a4a" stroke="#3a6b30" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M18 26c0-2 6-4 14-4s14 2 14 4l-3 26c-1 6-6 10-11 10s-10-4-11-10z" fill="#f0c93a" stroke="#c9a11f" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M18 26l10 8 4-8 4 8 10-8M20 38l9 6 3-6 3 6 9-6M23 48l6 5 3-5 3 5 6-5" stroke="#c9a11f" stroke-width="1.6" fill="none" stroke-linejoin="round"/>
+    <circle cx="24" cy="32" r="1.3" fill="#c9a11f" stroke="none"/>
+    <circle cx="40" cy="32" r="1.3" fill="#c9a11f" stroke="none"/>
+    <circle cx="32" cy="28" r="1.3" fill="#c9a11f" stroke="none"/>
+    <circle cx="29" cy="42" r="1.3" fill="#c9a11f" stroke="none"/>
+    <circle cx="35" cy="42" r="1.3" fill="#c9a11f" stroke="none"/>
+  </symbol>
+<symbol id="ic-fr-papaya" viewBox="0 0 64 64">
+    <path d="M28 14c2-2 6-2 8 0-2 3-6 3-8 0z" fill="#5c7a37" stroke="#3e5624" stroke-width="2"/>
+    <path d="M32 16c-14 4-20 16-18 26 2 9 10 16 18 16s16-7 18-16c2-10-4-22-18-26z" fill="#eb9a41" stroke="#c9761f" stroke-width="3" stroke-linejoin="round"/>
+    <ellipse cx="32" cy="40" rx="7" ry="10" fill="#f0d24a" opacity=".6" stroke="none"/>
+  </symbol>
+<symbol id="ic-fr-avocado" viewBox="0 0 64 64">
+    <path d="M30 12c1-2 3-3 5-2-1 2-2 3-5 2z" fill="#5c7a37" stroke="#3e5624" stroke-width="2"/>
+    <path d="M32 16c4 4 5 8 4 12 8 2 13 10 13 18 0 10-8 18-17 18s-17-8-17-18c0-8 5-16 13-18-1-4 0-8 4-12z" fill="#6b8f4e" stroke="#456035" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="32" cy="44" r="9" fill="#c79a63" stroke="#8a6a3f" stroke-width="2.5"/>
+  </symbol>
+<symbol id="ic-fr-durian" viewBox="0 0 64 64">
+    <circle cx="32" cy="34" r="18" fill="#c3d67a" stroke="#889a4a" stroke-width="3"/>
+    <path d="M32 16v-6M20 20l-4-5M44 20l4-5M14 34h-6M50 34h6M18 46l-4 5M46 46l4 5M24 50l-2 6M40 50l2 6" stroke="#889a4a" stroke-width="2.4" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-fr-mangosteen" viewBox="0 0 64 64">
+    <circle cx="32" cy="36" r="18" fill="#5a3a5e" stroke="#3a2440" stroke-width="3"/>
+    <path d="M32 18l3 6 6-3-2 6 6 1-5 4 4 5-6-1 0 6-4-4-3 5-3-5-4 4 0-6-6 1 4-5-5-4 6-1-2-6 6 3z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="1.6" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="ic-fr-custardapple" viewBox="0 0 64 64">
+    <path d="M30 14c1-2 3-3 5-2-1 2-2 3-5 2z" fill="#5c7a37" stroke="#3e5624" stroke-width="2"/>
+    <circle cx="32" cy="36" r="18" fill="#9bbf68" stroke="#6a8a44" stroke-width="3"/>
+    <circle cx="24" cy="26" r="4" fill="none" stroke="#6a8a44" stroke-width="1.6"/>
+    <circle cx="34" cy="22" r="4" fill="none" stroke="#6a8a44" stroke-width="1.6"/>
+    <circle cx="44" cy="28" r="4" fill="none" stroke="#6a8a44" stroke-width="1.6"/>
+    <circle cx="22" cy="38" r="4" fill="none" stroke="#6a8a44" stroke-width="1.6"/>
+    <circle cx="34" cy="36" r="4" fill="none" stroke="#6a8a44" stroke-width="1.6"/>
+    <circle cx="44" cy="42" r="4" fill="none" stroke="#6a8a44" stroke-width="1.6"/>
+    <circle cx="28" cy="48" r="4" fill="none" stroke="#6a8a44" stroke-width="1.6"/>
+    <circle cx="40" cy="50" r="4" fill="none" stroke="#6a8a44" stroke-width="1.6"/>
+  </symbol>
+<symbol id="ic-fr-starfruit" viewBox="0 0 64 64">
+    <path d="M32 8l6 16 17-4-11 14 11 14-17-4-6 16-6-16-17 4 11-14-11-14 17 4z" fill="#d4c94a" stroke="#a89a1f" stroke-width="3" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="ic-fr-coconut" viewBox="0 0 64 64">
+    <circle cx="32" cy="34" r="18" fill="#8a6a4a" stroke="#5c4530" stroke-width="3"/>
+    <circle cx="27" cy="26" r="2.2" fill="#3a2a1c" stroke="none"/>
+    <circle cx="35" cy="24" r="2.2" fill="#3a2a1c" stroke="none"/>
+    <circle cx="31" cy="32" r="2.2" fill="#3a2a1c" stroke="none"/>
+    <path d="M18 22c-2-6 0-12 4-14M46 22c2-6 0-12-4-14" stroke="#5c4530" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-fr-sugarcane" viewBox="0 0 64 64">
+    <path d="M26 8h12v48h-12z" fill="#c3a24a" stroke="#8a6a2c" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M26 18h12M26 28h12M26 38h12M26 48h12" stroke="#8a6a2c" stroke-width="2.2"/>
+    <path d="M32 8c-4-4-4-6 0-6M32 8c4-4 4-6 0-6" stroke="#7fa851" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-fr-roselle" viewBox="0 0 64 64">
+    <path d="M32 16c4 4 4 8 0 10-4-2-4-6 0-10zM32 16c-8 2-12 8-10 12 6 0 10-4 10-12zM32 16c8 2 12 8 10 12-6 0-10-4-10-12z" fill="#c94f3f" stroke="#963a2e" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M32 26c8 0 14 8 14 16 0 8-6 14-14 14s-14-6-14-14c0-8 6-16 14-16z" fill="#d9645a" stroke="#963a2e" stroke-width="3"/>
+  </symbol>
+<symbol id="ic-fr-cherrytomato" viewBox="0 0 64 64">
+    <circle cx="24" cy="40" r="12" fill="#d94f3f" stroke="#a83a2e" stroke-width="2.6"/>
+    <circle cx="42" cy="32" r="10" fill="#e0605a" stroke="#a83a2e" stroke-width="2.6"/>
+    <path d="M22 30l2-4 2 4 4-1-2 4 3 3-4 1 0 4-3-3-3 3 0-4-4-1 3-3-2-4z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="1.2"/>
+    <path d="M40 24l1.5-3 1.5 3 3-1-1.5 3 2 2-3 1 0 3-2-2-2 2 0-3-3-1 2-2z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="1.2"/>
+  </symbol>
+<symbol id="ic-fr-dragonfruit" viewBox="0 0 64 64">
+    <path d="M32 12c11 0 18 10 18 22s-7 22-18 22-18-10-18-22 7-22 18-22z" fill="#d9457a" stroke="#a8305c" stroke-width="3"/>
+    <path d="M32 12v-6M20 16l-3-5M44 16l3-5M14 30l-6-1M50 30l6-1M18 46l-4 4M46 46l4 4M32 56v6" stroke="#7fa851" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+    <circle cx="26" cy="28" r="1.6" fill="#fff" stroke="none"/>
+    <circle cx="36" cy="34" r="1.6" fill="#fff" stroke="none"/>
+    <circle cx="28" cy="40" r="1.6" fill="#fff" stroke="none"/>
+  </symbol>
+<symbol id="ic-fr-passionfruit" viewBox="0 0 64 64">
+    <circle cx="32" cy="34" r="18" fill="#5a3a5e" stroke="#3a2440" stroke-width="3"/>
+    <path d="M18 24c4 3 4 7 0 10M46 24c-4 3-4 7 0 10M16 38c4-1 7 2 7 6M48 38c-4-1-7 2-7 6" stroke="#3a2440" stroke-width="1.6" fill="none" opacity=".6"/>
+  </symbol>
+<symbol id="ic-fr-guava" viewBox="0 0 64 64">
+    <path d="M30 14c1-2 3-3 5-2-1 2-2 3-5 2z" fill="#7a9a4e" stroke="#5c7a37" stroke-width="2"/>
+    <circle cx="32" cy="36" r="18" fill="#c3d67a" stroke="#889a4a" stroke-width="3"/>
+    <circle cx="24" cy="28" r="2" fill="#a8bf5e" stroke="none"/>
+    <circle cx="38" cy="26" r="1.6" fill="#a8bf5e" stroke="none"/>
+    <circle cx="42" cy="40" r="2" fill="#a8bf5e" stroke="none"/>
+    <circle cx="26" cy="44" r="1.6" fill="#a8bf5e" stroke="none"/>
+  </symbol>
+<symbol id="ic-fr-wax" viewBox="0 0 64 64">
+    <path d="M28 12h8l2 8h-12z" fill="#7fa851" stroke="#527431" stroke-width="2"/>
+    <path d="M22 20h20c2 8 4 14 4 20 0 10-6 16-14 16s-14-6-14-16c0-6 2-12 4-20z" fill="#d9457a" stroke="#a8305c" stroke-width="3" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="ic-fr-persimmon" viewBox="0 0 64 64">
+    <path d="M32 10l4 6 6-3-1 7 7 1-5 5 5 5-7 1 1 7-6-3-4 6-4-6-6 3 1-7-7-1 5-5-5-5 7-1-1-7 6 3z" fill="#7fa851" stroke="#527431" stroke-width="1.6" stroke-linejoin="round"/>
+    <circle cx="32" cy="38" r="16" fill="#eb9a41" stroke="#c9761f" stroke-width="3"/>
+  </symbol>
+<symbol id="ic-fr-longan" viewBox="0 0 64 64">
+    <path d="M20 14c6-2 12 1 14 6" fill="none" stroke="#5c7a37" stroke-width="2.2" stroke-linecap="round"/>
+    <circle cx="24" cy="32" r="11" fill="#d4b483" stroke="#a5763f" stroke-width="2.6"/>
+    <circle cx="42" cy="38" r="11" fill="#c3a273" stroke="#a5763f" stroke-width="2.6"/>
+    <circle cx="33" cy="22" r="9" fill="#d4b483" stroke="#a5763f" stroke-width="2.6"/>
+  </symbol>
+<symbol id="ic-fr-lychee" viewBox="0 0 64 64">
+    <path d="M20 14c6-2 12 1 14 6" fill="none" stroke="#5c7a37" stroke-width="2.2" stroke-linecap="round"/>
+    <circle cx="24" cy="32" r="11" fill="#d9457a" stroke="#a8305c" stroke-width="2.6"/>
+    <circle cx="42" cy="38" r="11" fill="#c94f3f" stroke="#a8305c" stroke-width="2.6"/>
+    <circle cx="33" cy="22" r="9" fill="#d9457a" stroke="#a8305c" stroke-width="2.6"/>
+    <circle cx="20" cy="28" r="1.2" fill="#a8305c" stroke="none"/>
+    <circle cx="27" cy="36" r="1.2" fill="#a8305c" stroke="none"/>
+    <circle cx="38" cy="35" r="1.2" fill="#a8305c" stroke="none"/>
+    <circle cx="45" cy="42" r="1.2" fill="#a8305c" stroke="none"/>
+  </symbol>
+<symbol id="ic-fr-pomegranate" viewBox="0 0 64 64">
+    <path d="M26 12l2 4 4-3 4 3 2-4c1 3 0 5-2 6h-8c-2-1-3-3-2-6z" fill="#7fa851" stroke="#527431" stroke-width="1.8" stroke-linejoin="round"/>
+    <circle cx="32" cy="38" r="18" fill="#b0403a" stroke="#7a2a26" stroke-width="3"/>
+    <path d="M32 20v10M22 30c2 4 6 5 10 4M42 30c-2 4-6 5-10 4" stroke="#7a2a26" stroke-width="1.6" fill="none" opacity=".5"/>
+  </symbol>
+<symbol id="ic-fr-goji" viewBox="0 0 64 64">
+    <ellipse cx="22" cy="26" rx="6" ry="9" fill="#d9453a" stroke="#a3302a" stroke-width="2.2" transform="rotate(-15 22 26)"/>
+    <ellipse cx="36" cy="22" rx="6" ry="9" fill="#e0554a" stroke="#a3302a" stroke-width="2.2" transform="rotate(10 36 22)"/>
+    <ellipse cx="28" cy="40" rx="6" ry="9" fill="#d9453a" stroke="#a3302a" stroke-width="2.2" transform="rotate(-5 28 40)"/>
+    <ellipse cx="42" cy="38" rx="6" ry="9" fill="#e0554a" stroke="#a3302a" stroke-width="2.2" transform="rotate(15 42 38)"/>
+  </symbol>
+<symbol id="ic-fr-kiwi" viewBox="0 0 64 64">
+    <circle cx="32" cy="34" r="18" fill="#8a6a4a" stroke="#5c4530" stroke-width="3"/>
+    <circle cx="32" cy="34" r="14" fill="#9bbf68" stroke="#6a8a44" stroke-width="2"/>
+    <circle cx="32" cy="34" r="4" fill="#f1e6cf" stroke="none"/>
+    <circle cx="32" cy="24" r="1.3" fill="#3a2a1c" stroke="none"/>
+    <circle cx="40" cy="28" r="1.3" fill="#3a2a1c" stroke="none"/>
+    <circle cx="41" cy="38" r="1.3" fill="#3a2a1c" stroke="none"/>
+    <circle cx="34" cy="44" r="1.3" fill="#3a2a1c" stroke="none"/>
+    <circle cx="25" cy="42" r="1.3" fill="#3a2a1c" stroke="none"/>
+    <circle cx="23" cy="30" r="1.3" fill="#3a2a1c" stroke="none"/>
+  </symbol>
+<symbol id="face-happy" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="2.6"/>
+    <path d="M13 18.5c.3-1.8 3.4-1.8 3.7 0M23.3 18.5c.3-1.8 3.4-1.8 3.7 0" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M12.5 24c2 3 13 3 15 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  </symbol>
+<symbol id="face-neutral" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="2.6"/>
+    <path d="M13 18.5c.3-1.8 3.4-1.8 3.7 0M23.3 18.5c.3-1.8 3.4-1.8 3.7 0" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M13.5 25.5h13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  </symbol>
+<symbol id="face-sad" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="2.6"/>
+    <path d="M13 19c.3-1.8 3.4-1.8 3.7 0M23.3 19c.3-1.8 3.4-1.8 3.7 0" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M12.5 27c2-3 13-3 15 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  </symbol>
+<symbol id="tone-good" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="2.6"/>
+    <path d="M13 20.5l4.5 4.5L27 15" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="tone-spots" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="2.6"/>
+    <circle cx="15" cy="16" r="1.9" fill="currentColor" stroke="none"/>
+    <circle cx="25" cy="14" r="1.9" fill="currentColor" stroke="none"/>
+    <circle cx="26" cy="23" r="1.9" fill="currentColor" stroke="none"/>
+    <circle cx="15.5" cy="25" r="1.9" fill="currentColor" stroke="none"/>
+    <circle cx="21" cy="20" r="1.9" fill="currentColor" stroke="none"/>
+  </symbol>
+<symbol id="tone-hives" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="2.6"/>
+    <path d="M10 23c1.5-3 3.5-3 5 0s3.5 3 5 0 3.5-3 5 0 3.5 3 5 0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M10 16c1.5-3 3.5-3 5 0s3.5 3 5 0 3.5-3 5 0 3.5 3 5 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".55"/>
+  </symbol>
+<symbol id="tone-vomit" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="2.6"/>
+    <path d="M13.5 15.5l3 3M16.5 15.5l-3 3M23.5 15.5l3 3M26.5 15.5l-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <path d="M16.5 22c1.2 1 5.8 1 7 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+    <path d="M18.5 23.5c-.8 1.6-2.3 2-1.3 3.6.9 1.5-1 2-.6 3.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M21.5 23.5c.8 1.6 2.3 2 1.3 3.6-.9 1.5 1 2 .6 3.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </symbol>
+<symbol id="tone-poop" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="2.6"/>
+    <path d="M20 10c1.6 0 2 1.6 1.3 2.6 2.4.2 3.7 2 3 3.7 2.6.6 3.3 3.3 1.6 4.8 2.6 1.6 2.3 5-.8 6-.4 1.7-2 2.6-3.7 2.3-.9 1.3-3 1.4-4 .1-1.5 1.4-3.8.7-4.2-1-2.2.1-3.7-1.6-3.1-3.4-2.2-1.1-2.2-4 .3-5-1-2 .6-4.1 2.7-4-.3-1.9 1.3-3.5 3.2-3.3-.2-1.3.9-2.8 2.7-2.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="16.5" cy="23" r="1.1" fill="currentColor" stroke="none"/>
+    <circle cx="23.5" cy="22" r="1.1" fill="currentColor" stroke="none"/>
+    <path d="M17.5 26.5c1 1.1 3.3 1.1 4.3-.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+  </symbol>
+<symbol id="tone-danger" viewBox="0 0 40 40">
+    <path d="M20 7l16 27H4z" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linejoin="round"/>
+    <path d="M20 18v8" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/>
+    <circle cx="20" cy="30" r="1.6" fill="currentColor" stroke="none"/>
+  </symbol>
+<symbol id="ic-b-shell-v1" viewBox="0 0 64 64">
+    <path d="M32 10c13 5 21 19 20 36a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4c-1-17 7-31 20-36z" fill="#e8917a" stroke="#b0603f" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M32 10v40M23 13c-5 10-6 22-4 37M41 13c5 10 6 22 4 37M17 20c-3 9-4 19-2 30M47 20c3 9 4 19 2 30" stroke="#b0603f" stroke-width="1.6" fill="none"/>
+    <path d="M26 50c2 2 4 3 6 3s4-1 6-3" stroke="#b0603f" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  </symbol>
+<symbol id="ic-b-shell-v2" viewBox="0 0 64 64">
+    <path d="M32 13.3C46.4 15 55.4 25.9 54.5 38.5C54.5 45.6 50 51 43.8 51H20.3C14 51 9.5 45.6 9.5 38.5C8.6 25.9 17.6 15 32 13.3Z" fill="#e8ddc8" stroke="#a5854f" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M32 14.5C42.4 14.5 48.9 22.4 48.3 31.4C48.3 36.6 45 40.4 40.5 40.4H23.5C19 40.4 15.8 36.6 15.8 31.4C15.1 22.4 21.5 14.5 32 14.5Z" fill="none" stroke="#a5854f" stroke-width="1.6" opacity=".65"/>
+    <path d="M32 14C38.6 14 42.8 19 42.4 24.9C42.4 28.1 40.3 30.6 37.4 30.6H26.6C23.8 30.6 21.6 28.1 21.6 24.9C21.3 19 25.4 14 32 14Z" fill="none" stroke="#a5854f" stroke-width="1.4" opacity=".6"/>
+    <path d="M32 13.6C35.1 13.6 37.1 16 37 18.8C37 20.4 36 21.5 34.6 21.5H29.4C28 21.5 27 20.4 27 18.8C26.9 16 28.9 13.6 32 13.6Z" fill="none" stroke="#a5854f" stroke-width="1.2" opacity=".55"/>
+  </symbol>
+<symbol id="ic-b-shell-v3" viewBox="0 0 64 64">
+    <path d="M6 40c4-14 14-24 26-24 3 8 3 16 0 24-12 4-20 4-26 0z" fill="#e8ddc8" stroke="#a5854f" stroke-width="2.8" stroke-linejoin="round"/>
+    <path d="M58 40c-4-14-14-24-26-24-3 8-3 16 0 24 12 4 20 4 26 0z" fill="#f3ecd8" stroke="#a5854f" stroke-width="2.8" stroke-linejoin="round"/>
+    <path d="M10 38c6-10 14-17 22-19M54 38c-6-10-14-17-22-19" stroke="#a5854f" stroke-width="1.3" fill="none" opacity=".5"/>
+    <ellipse cx="32" cy="34" rx="7" ry="6" fill="#f0a84a" stroke="#c9761f" stroke-width="2.2"/>
+  </symbol>
+<symbol id="ic-b-shell-v4" viewBox="0 0 64 64">
+    <path d="M32 8c14 0 24 11 24 24s-10 24-24 24-24-11-24-24 10-24 24-24z" fill="#d9b877" stroke="#8a6a3f" stroke-width="3"/>
+    <path d="M32 16c9 0 16 7 16 16s-7 16-16 16-16-7-16-16 7-16 16-16z" fill="none" stroke="#8a6a3f" stroke-width="2" opacity=".6"/>
+    <path d="M32 22c6 0 10 4 10 10s-4 10-10 10-10-4-10-10 4-10 10-10z" fill="none" stroke="#8a6a3f" stroke-width="1.6" opacity=".6"/>
+    <path d="M32 28c3 0 4 2 4 4s-1 4-4 4" fill="none" stroke="#8a6a3f" stroke-width="1.4" opacity=".6"/>
+  </symbol>
+<symbol id="ic-b-shell-v5" viewBox="0 0 64 64">
+    <path d="M22 10c-10 4-16 16-14 30 2 12 10 20 18 20 6 0 10-4 12-10 4-12 4-28-2-38-3-5-9-4-14-2z" fill="#3a5a6b" stroke="#22384a" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M24 14c-6 8-8 18-6 30" stroke="#22384a" stroke-width="1.4" fill="none" opacity=".5"/>
+    <path d="M20 12c-2 2-3 4-3 4l3 3 4-5z" fill="#f0e6d0" stroke="#22384a" stroke-width="2" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="ic-bokchoy-a" viewBox="0 0 64 64">
+    <path d="M22 54c-3-10-2-18 2-24 2 8 2 16 1 24zM32 54c-1-12 0-20 2-26 2 8 3 18 1 26zM42 54c3-10 2-18-2-24-2 8-2 16-1 24z" fill="#eef0d8" stroke="#c9c89a" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M32 34c-14 0-22-12-19-26 12 1 20 10 21 24z" fill="#5c9a4a" stroke="#3a6b30" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M32 34c-1-15 4-25 12-32 7 9 6 21-1 30-3 4-7 3-11 2z" fill="#4a8a3e" stroke="#3a6b30" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M32 34c14 1 23-10 21-24-12 0-22 9-21 24z" fill="#6aab52" stroke="#3a6b30" stroke-width="2.6" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="ic-bokchoy-b" viewBox="0 0 64 64">
+    <path d="M28 54c0-10 1-16 4-20 3 4 4 10 4 20z" fill="#eef0d8" stroke="#b8b888" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M18 46c0-8 2-13 6-16 3 3 4 8 3 16z" fill="#eef0d8" stroke="#b8b888" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M46 46c0-8-2-13-6-16-3 3-4 8-3 16z" fill="#eef0d8" stroke="#b8b888" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M32 34c-11 0-18-9-16-20 10 1 16 8 16 20z" fill="#5c9a4a" stroke="#3a6b30" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M32 34c11 0 18-9 16-20-10 1-16 8-16 20z" fill="#6aab52" stroke="#3a6b30" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M21 44c-8 2-13-4-13-12 7 0 12 5 13 12z" fill="#4a8a3e" stroke="#3a6b30" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M43 44c8 2 13-4 13-12-7 0-12 5-13 12z" fill="#6aab52" stroke="#3a6b30" stroke-width="2.2" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="ic-bokchoy-c" viewBox="0 0 64 64">
+    <path d="M20 54c-1-6 1-10 4-12h16c3 2 5 6 4 12z" fill="#f1e6cf" stroke="#c9b98a" stroke-width="2.4" stroke-linejoin="round"/>
+    <circle cx="24" cy="30" r="11" fill="#6aab52" stroke="#3a6b30" stroke-width="2.4"/>
+    <circle cx="40" cy="26" r="10" fill="#7fbb5e" stroke="#3a6b30" stroke-width="2.4"/>
+    <circle cx="33" cy="38" r="11" fill="#5c9a4a" stroke="#3a6b30" stroke-width="2.4"/>
+  </symbol>
+<symbol id="ic-bokchoy-d" viewBox="0 0 64 64">
+    <path d="M24 54c-2-8-1-14 2-18 1 6 1 12 0 18zM32 54c-1-9 0-15 2-19 1 6 2 13 0 19zM40 54c2-8 1-14-2-18-1 6-1 12 0 18z" fill="#e0dcb0" stroke="#b8b888" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M20 40c2-2 4-2 4-2s-8-10-6-22c10 4 14 14 12 22 2 0 4 2 4 2z" fill="#5c9a4a" stroke="#3a6b30" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M44 40c-2-2-4-2-4-2s8-10 6-22c-10 4-14 14-12 22-2 0-4 2-4 2z" fill="#6aab52" stroke="#3a6b30" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M32 38c-1-16 2-26 8-32 6 7 6 19 0 28-2 3-5 4-8 4z" fill="#7fbb5e" stroke="#3a6b30" stroke-width="2.4" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="ic-bokchoy-e" viewBox="0 0 64 64">
+    <path d="M32 54V38" stroke="#7fa851" stroke-width="6" stroke-linecap="round"/>
+    <path d="M32 38c-16 2-26-10-24-26 16 0 26 12 24 26z" fill="#6aab52" stroke="#3a6b30" stroke-width="2.8" stroke-linejoin="round"/>
+    <path d="M14 16c8 6 14 14 18 22" stroke="#3a6b30" stroke-width="1.4" fill="none" opacity=".5"/>
+  </symbol>
+</svg>
+
+<div class="shell-section">
+  <h2>🥬 青江菜叢 icon(ic-bokchoy)— 已依您傳的參考圖重新繪製,目前套用中</h2>
+  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));">
+    <div class="card shell-variant">
+      <svg class="icon big" viewBox="0 0 64 64"><use href="#ic-bokchoy"></use></svg>
+      <div class="meta">
+        <div class="icon-id">新版:單一實心梗座 + 5 條實心支梗 + 5 片橢圓葉(帶葉脈)</div>
+        <div class="foods" style="font-family:ui-monospace,monospace;">ic-bokchoy</div>
+      </div>
+    </div>
+  </div>
+  <div class="hint" style="margin:10px 0 0;">下面是先前的 A~E 候選,僅供參考比較(已不是套用中的版本):</div>
+  <div class="grid">
+  <div class="card shell-variant">
+  <svg class="icon big" viewBox="0 0 64 64"><use href="#ic-bokchoy-a"></use></svg>
+  <div class="meta">
+    <div class="icon-id">A. 青江菜叢(寬扁實心梗)</div>
+    <div class="foods" style="font-family:ui-monospace,monospace;">ic-bokchoy-a</div>
+  </div>
+</div><div class="card shell-variant">
+  <svg class="icon big" viewBox="0 0 64 64"><use href="#ic-bokchoy-b"></use></svg>
+  <div class="meta">
+    <div class="icon-id">B. 三葉分株(各自實心短梗)</div>
+    <div class="foods" style="font-family:ui-monospace,monospace;">ic-bokchoy-b</div>
+  </div>
+</div><div class="card shell-variant">
+  <svg class="icon big" viewBox="0 0 64 64"><use href="#ic-bokchoy-c"></use></svg>
+  <div class="meta">
+    <div class="icon-id">C. 葉叢+平底實心梗座</div>
+    <div class="foods" style="font-family:ui-monospace,monospace;">ic-bokchoy-c</div>
+  </div>
+</div><div class="card shell-variant">
+  <svg class="icon big" viewBox="0 0 64 64"><use href="#ic-bokchoy-d"></use></svg>
+  <div class="meta">
+    <div class="icon-id">D. 展開葉叢(三片實心楔形梗)</div>
+    <div class="foods" style="font-family:ui-monospace,monospace;">ic-bokchoy-d</div>
+  </div>
+</div><div class="card shell-variant">
+  <svg class="icon big" viewBox="0 0 64 64"><use href="#ic-bokchoy-e"></use></svg>
+  <div class="meta">
+    <div class="icon-id">E. 極簡單片葉+單一實心梗</div>
+    <div class="foods" style="font-family:ui-monospace,monospace;">ic-bokchoy-e</div>
+  </div>
+</div>
+  </div>
+</div>
+
+<div class="shell-section">
+  <h2>🐚 貝類 icon(ic-b-shell)— 5 款候選,請挑一款</h2>
+  <div class="grid">
+  <div class="card shell-variant">
+  <svg class="icon big" viewBox="0 0 64 64"><use href="#ic-b-shell-v1"></use></svg>
+  <div class="meta">
+    <div class="icon-id">A. 經典扇貝(放射肋線)</div>
+    <div class="foods" style="font-family:ui-monospace,monospace;">ic-b-shell-v1</div>
+  </div>
+</div><div class="card shell-variant">
+  <svg class="icon big" viewBox="0 0 64 64"><use href="#ic-b-shell-v2"></use></svg>
+  <div class="meta">
+    <div class="icon-id">B. 圓潤蛤蜊(同心生長紋) <b style="color:#c9761f;">(目前套用中)</b></div>
+    <div class="foods" style="font-family:ui-monospace,monospace;">ic-b-shell-v2</div>
+  </div>
+</div><div class="card shell-variant">
+  <svg class="icon big" viewBox="0 0 64 64"><use href="#ic-b-shell-v3"></use></svg>
+  <div class="meta">
+    <div class="icon-id">C. 開殼雙貝(蚌肉可見)</div>
+    <div class="foods" style="font-family:ui-monospace,monospace;">ic-b-shell-v3</div>
+  </div>
+</div><div class="card shell-variant">
+  <svg class="icon big" viewBox="0 0 64 64"><use href="#ic-b-shell-v4"></use></svg>
+  <div class="meta">
+    <div class="icon-id">D. 螺類(同心螺旋紋)</div>
+    <div class="foods" style="font-family:ui-monospace,monospace;">ic-b-shell-v4</div>
+  </div>
+</div><div class="card shell-variant">
+  <svg class="icon big" viewBox="0 0 64 64"><use href="#ic-b-shell-v5"></use></svg>
+  <div class="meta">
+    <div class="icon-id">E. 淡菜/孔雀蛤(深色長橢圓)</div>
+    <div class="foods" style="font-family:ui-monospace,monospace;">ic-b-shell-v5</div>
+  </div>
+</div>
+  </div>
+</div>
+
+<h2>目前有食材在用的 icon(共 66 款)</h2>
+<div class="grid">
+<div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-rice"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-rice</div>
+    <div class="foods">白米、糙米、黑米、紫米、糯米、胚芽米</div>
+    <div class="count">6 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-millet"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-millet</div>
+    <div class="foods">小米、燕麥、薏仁、蕎麥、大麥、黑麥、高粱、藜麥、小麥(麵條/麵包)</div>
+    <div class="count">9 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-oat"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-oat</div>
+    <div class="foods">樹薯粉、玉米粉、太白粉、地瓜粉、糯米粉</div>
+    <div class="count">5 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-sweetpotato"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-sweetpotato</div>
+    <div class="foods">地瓜、紫薯、芋頭、山藥、馬鈴薯、南瓜</div>
+    <div class="count">6 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-longroot"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-longroot</div>
+    <div class="foods">玉米、蓮藕、牛蒡、竹筍、大頭菜</div>
+    <div class="count">5 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-radish"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-radish</div>
+    <div class="foods">白蘿蔔、紅蘿蔔、甜菜根</div>
+    <div class="count">3 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-generic-bean"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-generic-bean</div>
+    <div class="foods">紅豆、綠豆、黑豆、花豆、毛豆、豇豆、扁豆、蠶豆、豌豆、荷蘭豆、鷹嘴豆、皇帝豆、大豆(黃豆)</div>
+    <div class="count">13 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-seed"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-seed</div>
+    <div class="foods">蓮子、栗子、菱角、荸薺、百合、雪蓮子</div>
+    <div class="count">6 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-nut"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-nut</div>
+    <div class="foods">花生、松子、核桃、堅果、芝麻</div>
+    <div class="count">5 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-cabbage"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-cabbage</div>
+    <div class="foods">芥藍、芥菜、高麗菜、紫高麗菜、白花椰菜、綠花椰菜、羽衣甘藍、抱子甘藍</div>
+    <div class="count">8 項食材</div>
+  </div>
+</div><div class="card just-changed">
+  <div class="badge">剛剛依參考圖重繪</div>
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-bokchoy"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-bokchoy</div>
+    <div class="foods">青江菜、小白菜、大白菜、娃娃菜、大陸妹、奶油白菜、美生菜(萵苣)、A菜、菠菜、地瓜葉、空心菜、油菜、莧菜、紅莧菜、紅鳳菜、皇宮菜(蚵仔白菜)</div>
+    <div class="count">16 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-wildleaf"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-wildleaf</div>
+    <div class="foods">茼蒿、山蘇、水蓮、水芹、金針、冰花、小松菜、龍鬚菜、蘿蔔嬰</div>
+    <div class="count">9 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-melon"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-melon</div>
+    <div class="foods">冬瓜、絲瓜、苦瓜、櫛瓜、小黃瓜、大黃瓜、佛手瓜、扁蒲(瓠瓜)</div>
+    <div class="count">8 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-sprout"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-sprout</div>
+    <div class="foods">四季豆、豆芽菜、苜蓿芽、豌豆苗、豌豆仁</div>
+    <div class="count">5 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-generic-fruitveg"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-generic-fruitveg</div>
+    <div class="foods">茄子、秋葵、彩椒、洋蔥、番茄、蘆筍、玉米筍、茭白筍</div>
+    <div class="count">8 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-allium"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-allium</div>
+    <div class="foods">蔥、薑、蒜、韭菜、韭黃、辣椒</div>
+    <div class="count">6 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-generic-herb"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-generic-herb</div>
+    <div class="foods">香菜、紫蘇、羅勒、歐芹、芹菜、菊花、九層塔、西洋芹、細香蔥、艾草(青糰)</div>
+    <div class="count">10 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-generic-mushroom"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-generic-mushroom</div>
+    <div class="foods">香菇、蘑菇、舞菇、草菇、松茸、黑木耳、白木耳、杏鮑菇、金針菇、秀珍菇、鴻喜菇、雪白菇、猴頭菇、珊瑚菇、波特菇、黑蟶菇、黑美人菇</div>
+    <div class="count">17 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-generic-seaweed"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-generic-seaweed</div>
+    <div class="foods">昆布、海菜、海茸、紫菜、海帶、海帶芽、石花菜、珊瑚草</div>
+    <div class="count">8 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-apple"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-apple</div>
+    <div class="foods">蘋果</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-pear"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-pear</div>
+    <div class="foods">梨子</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-peachwhite"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-peachwhite</div>
+    <div class="foods">白桃</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-peachyellow"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-peachyellow</div>
+    <div class="foods">黃桃</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-plum"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-plum</div>
+    <div class="foods">李子</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-ume"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-ume</div>
+    <div class="foods">梅子</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-jujube"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-jujube</div>
+    <div class="foods">棗子</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-reddate"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-reddate</div>
+    <div class="foods">紅棗</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-loquat"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-loquat</div>
+    <div class="foods">枇杷</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-honeypeach"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-honeypeach</div>
+    <div class="foods">水蜜桃</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-citrus"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-citrus</div>
+    <div class="foods">橘子、柳丁、檸檬、柚子、葡萄柚</div>
+    <div class="count">5 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-berry"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-berry</div>
+    <div class="foods">草莓、藍莓、葡萄、櫻桃、桑葚、蔓越莓</div>
+    <div class="count">6 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-banana"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-banana</div>
+    <div class="foods">香蕉</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-mango"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-mango</div>
+    <div class="foods">芒果</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-pineapple"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-pineapple</div>
+    <div class="foods">鳳梨</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-papaya"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-papaya</div>
+    <div class="foods">木瓜</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-avocado"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-avocado</div>
+    <div class="foods">酪梨</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-durian"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-durian</div>
+    <div class="foods">榴槤</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-mangosteen"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-mangosteen</div>
+    <div class="foods">山竹</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-custardapple"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-custardapple</div>
+    <div class="foods">釋迦</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-starfruit"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-starfruit</div>
+    <div class="foods">楊桃</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-coconut"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-coconut</div>
+    <div class="foods">椰子</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-sugarcane"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-sugarcane</div>
+    <div class="foods">甘蔗</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-roselle"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-roselle</div>
+    <div class="foods">洛神</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-cherrytomato"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-cherrytomato</div>
+    <div class="foods">小番茄</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-dragonfruit"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-dragonfruit</div>
+    <div class="foods">火龍果</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-passionfruit"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-passionfruit</div>
+    <div class="foods">百香果</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-melonfruit"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-melonfruit</div>
+    <div class="foods">西瓜、哈密瓜、香瓜</div>
+    <div class="count">3 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-guava"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-guava</div>
+    <div class="foods">芭樂</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-wax"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-wax</div>
+    <div class="foods">蓮霧</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-persimmon"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-persimmon</div>
+    <div class="foods">柿子</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-longan"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-longan</div>
+    <div class="foods">龍眼</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-lychee"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-lychee</div>
+    <div class="foods">荔枝</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-pomegranate"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-pomegranate</div>
+    <div class="foods">石榴</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-goji"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-goji</div>
+    <div class="foods">枸杞</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-fr-kiwi"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-fr-kiwi</div>
+    <div class="foods">奇異果</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-generic-meat"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-generic-meat</div>
+    <div class="foods">雞肉、鴨肉、鵝肉、豬肉、牛肉、羊肉</div>
+    <div class="count">6 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-generic-fish"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-generic-fish</div>
+    <div class="foods">鱈魚、鱸魚、鯛魚、吳郭魚、虱目魚、石斑魚、比目魚、鮭魚、鮭魚卵、鮪魚、鯖魚、鰹魚、青甘、紅甘、鰤魚、飛魚、鰻魚、秋刀魚、沙丁魚、土魠魚、香魚、青旗、鯽魚、河豚、鱒魚、銀魚、烏魚、烏魚子、吻仔魚、海鱺魚、黃花魚、白帶魚</div>
+    <div class="count">32 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-generic-seafood"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-generic-seafood</div>
+    <div class="foods">蝦子、蝦米、櫻花蝦</div>
+    <div class="count">3 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-crab"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-crab</div>
+    <div class="foods">蟹</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-shell"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-shell</div>
+    <div class="foods">蜆、蛤蜊、干貝、扇貝、鮑魚、螺肉、海瓜子、蚵仔(牡蠣)、貽貝(孔雀蛤)</div>
+    <div class="count">9 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-softbody"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-softbody</div>
+    <div class="foods">花枝、魷魚、章魚、海膽</div>
+    <div class="count">4 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-egg"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-egg</div>
+    <div class="foods">蛋黃、蛋白、全蛋</div>
+    <div class="count">3 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-tofu"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-tofu</div>
+    <div class="foods">豆腐</div>
+    <div class="count">1 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-dairycarton"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-dairycarton</div>
+    <div class="foods">優格、起司、乳製品(牛奶)</div>
+    <div class="count">3 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-fat"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-fat</div>
+    <div class="foods">豬油、牛油</div>
+    <div class="count">2 項食材</div>
+  </div>
+</div><div class="card">
+  
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-generic-oil"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-generic-oil</div>
+    <div class="foods">香油、初榨麻油、初榨橄欖油、初榨酪梨油、初榨苦茶油、初榨芥花油、初榨椰子油</div>
+    <div class="count">7 項食材</div>
+  </div>
+</div>
+</div>
+
+<h2>目前沒有食材在用的 icon(共 37 款,僅供參考/備用)</h2>
+<div class="grid">
+<div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-tab-calendar"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-tab-calendar</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-tab-trial"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-tab-trial</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-tab-guide"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-tab-guide</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-trash"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-trash</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-plus-circle"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-plus-circle</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-edit-pencil"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-edit-pencil</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-download"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-download</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-upload"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-upload</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-move"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-move</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-dots-vertical"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-dots-vertical</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-tab-dashboard"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-tab-dashboard</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-progress-rings"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-progress-rings</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-pumpkin"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-pumpkin</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-potato"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-potato</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-yam"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-yam</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-spinach"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-spinach</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-cabbage"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-cabbage</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-waterspinach"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-waterspinach</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-cucumber"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-cucumber</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-eggplant"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-eggplant</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-okra"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-okra</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-food-generic"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-food-generic</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-generic-grain"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-generic-grain</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-generic-root"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-generic-root</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-generic-leaf"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-generic-leaf</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-generic-fruit"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-generic-fruit</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-generic-dairy"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-generic-dairy</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-rice"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-rice</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-flour"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-flour</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-whiteleaf"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-whiteleaf</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-celery"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-celery</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-mushroomcluster"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-mushroomcluster</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-seaflat"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-seaflat</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-pome"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-pome</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-otherfruit"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-otherfruit</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-fishflat"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-fishflat</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div><div class="card unused">
+  <svg class="icon" viewBox="0 0 64 64"><use href="#ic-b-fishsmall"></use></svg>
+  <div class="meta">
+    <div class="icon-id">ic-b-fishsmall</div>
+    <div class="foods">(目前未被任何食材使用)</div>
+  </div>
+</div>
+</div>
+
+</body>
+</html>
