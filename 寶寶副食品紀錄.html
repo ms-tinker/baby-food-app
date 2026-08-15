@@ -475,7 +475,7 @@
     <div class="card" id="guideContainer"></div>
   </section>
 
-  <div class="footnote">資料僅儲存在此瀏覽器(localStorage),換裝置或清除瀏覽器資料會遺失;請用「儀表板」頁的「資料備份」匯出/匯入。</div>
+  <div class="footnote" id="syncFootnote">資料僅儲存在此瀏覽器(localStorage),換裝置或清除瀏覽器資料會遺失;請用「儀表板」頁的「資料備份」匯出/匯入。</div>
 </div>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -1153,6 +1153,24 @@
 </defs>
 </svg>
 
+<!-- ============ Firebase 雲端同步設定 ============
+     1. 到 https://console.firebase.google.com 建立專案 → 開啟 Firestore Database
+     2. 註冊網頁 App,把拿到的 config 貼到下面取代 YOUR_ 開頭的值
+     3. 沒填 config 之前,app 會自動退回「只存本機」模式,不影響現有功能
+-->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+  var firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+</script>
+
 <script>
 (function () {
   "use strict";
@@ -1511,7 +1529,267 @@
   function saveState() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
     catch (e) { console.warn("儲存失敗,可能是瀏覽器容量已滿", e); }
+    pushStateToCloud();
   }
+
+  /* ============ 雲端共享(房號)============
+     每個「房號」對應 Firestore 裡:
+       rooms/{code}            → 基本資料(寶寶清單、自訂項目、設定…不含照片)
+       rooms/{code}/entries/*  → 每一筆紀錄各自一份文件(含照片),避免單一文件超過 Firestore 1MB 上限
+     沒有房號的訪客會自動建立一個只屬於自己的新房號(不影響任何人),
+     要跟別人共用資料,就是把房號告訴對方,對方在「分享/共用」選單裡輸入加入。
+  */
+  var ROOM_KEY = "bbFoodApp_room";
+  var cloudEnabled = !!(window.firebase && firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf("YOUR_") !== 0);
+  var db = null;
+  if (cloudEnabled) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  }
+  var roomCode = null;
+  var roomRef = null;
+  var unsubscribeRoom = null;
+  var unsubscribeEntries = null;
+  var applyingRemoteUpdate = false;
+  var cloudSaveTimer = null;
+  var roomStatus = "offline"; // offline | connecting | synced | error
+  var lastPushedEntries = null; // entryId -> entry(含 babyId),用來跟下次存檔比對差異
+
+  function makeRoomCode() {
+    var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 避開容易混淆的 0/O/1/I
+    var s = "";
+    for (var i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return s;
+  }
+  function normalizeRoomCode(raw) {
+    return (raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+  }
+  function roomDocRef(code) { return db.collection("rooms").doc(code); }
+
+  // 把 state 拆成「基本資料(meta)」跟「攤平的紀錄陣列(entries,各自帶 babyId)」
+  function splitStateForCloud(s) {
+    var meta = { babies: s.babies, activeBabyId: s.activeBabyId, perBaby: {} };
+    var entries = [];
+    Object.keys(s.perBaby).forEach(function (babyId) {
+      var bucket = s.perBaby[babyId];
+      var metaBucket = {};
+      Object.keys(bucket).forEach(function (k) {
+        if (k !== "entries") metaBucket[k] = bucket[k];
+      });
+      meta.perBaby[babyId] = metaBucket;
+      (bucket.entries || []).forEach(function (e) {
+        var withBaby = { babyId: babyId };
+        Object.keys(e).forEach(function (k) { withBaby[k] = e[k]; });
+        entries.push(withBaby);
+      });
+    });
+    return { meta: meta, entries: entries };
+  }
+
+  // 把 meta + entries 子集合的內容,合併回 app 用的 state 結構
+  function mergeCloudIntoState(meta, entriesMap) {
+    var s = { babies: meta.babies || [], activeBabyId: meta.activeBabyId || null, perBaby: {} };
+    Object.keys(meta.perBaby || {}).forEach(function (babyId) {
+      var bucket = {};
+      var metaBucket = meta.perBaby[babyId];
+      Object.keys(metaBucket).forEach(function (k) { bucket[k] = metaBucket[k]; });
+      bucket.entries = [];
+      s.perBaby[babyId] = bucket;
+    });
+    Object.keys(entriesMap).forEach(function (id) {
+      var e = entriesMap[id];
+      var bucket = s.perBaby[e.babyId];
+      if (!bucket) return;
+      var clean = {};
+      Object.keys(e).forEach(function (k) { if (k !== "babyId") clean[k] = e[k]; });
+      bucket.entries.push(clean);
+    });
+    return s;
+  }
+
+  // 依 500 筆一批的限制,把一堆 set/delete 操作分批 commit
+  function commitInChunks(ops, size) {
+    var i = 0;
+    function next() {
+      if (i >= ops.length) return;
+      var batch = db.batch();
+      ops.slice(i, i + size).forEach(function (op) {
+        if (op.type === "set") batch.set(op.ref, op.data);
+        else batch.delete(op.ref);
+      });
+      i += size;
+      batch.commit().then(next).catch(function (err) { console.warn("批次寫入失敗", err); });
+    }
+    next();
+  }
+
+  // 比對這次的 entries 跟上次推上雲端的版本,只寫入真的有變動的那幾筆
+  function pushEntriesDiff(entries) {
+    var nextMap = {};
+    entries.forEach(function (e) { nextMap[e.id] = e; });
+    var prevMap = lastPushedEntries || {};
+    var ops = [];
+    Object.keys(nextMap).forEach(function (id) {
+      var e = nextMap[id];
+      var prevJSON = prevMap[id] ? JSON.stringify(prevMap[id]) : null;
+      if (prevJSON !== JSON.stringify(e)) {
+        ops.push({ type: "set", ref: roomRef.collection("entries").doc(id), data: e });
+      }
+    });
+    Object.keys(prevMap).forEach(function (id) {
+      if (!nextMap[id]) ops.push({ type: "delete", ref: roomRef.collection("entries").doc(id) });
+    });
+    lastPushedEntries = nextMap;
+    if (ops.length) commitInChunks(ops, 400);
+  }
+
+  function startListening(code) {
+    if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
+    if (unsubscribeEntries) { unsubscribeEntries(); unsubscribeEntries = null; }
+    roomRef = roomDocRef(code);
+    var remoteMeta = null, remoteEntriesMap = null;
+
+    function applyRemoteIfReady() {
+      if (!remoteMeta || !remoteEntriesMap) return;
+      roomStatus = "synced";
+      updateSyncUI();
+      applyingRemoteUpdate = true;
+      state = mergeCloudIntoState(remoteMeta, remoteEntriesMap);
+      lastPushedEntries = remoteEntriesMap;
+      if (state.activeBabyId) ensureBabyBucket(state.activeBabyId);
+      renderAll();
+      applyingRemoteUpdate = false;
+    }
+    function onError(err) {
+      console.warn("同步失敗", err);
+      roomStatus = "error";
+      updateSyncUI();
+    }
+
+    unsubscribeRoom = roomRef.onSnapshot(function (doc) {
+      var data = doc.data();
+      if (!data || !data.meta) return;
+      remoteMeta = data.meta;
+      applyRemoteIfReady();
+    }, onError);
+
+    unsubscribeEntries = roomRef.collection("entries").onSnapshot(function (snap) {
+      var map = {};
+      snap.forEach(function (d) { map[d.id] = d.data(); });
+      remoteEntriesMap = map;
+      applyRemoteIfReady();
+    }, onError);
+  }
+
+  function connectAsOwner(code) {
+    roomStatus = "connecting";
+    updateSyncUI();
+    roomDocRef(code).get().then(function (doc) {
+      roomCode = code;
+      localStorage.setItem(ROOM_KEY, code);
+      if (!doc.exists) {
+        // 全新房號:用這台裝置現有的資料當作起點
+        lastPushedEntries = {};
+        var split = splitStateForCloud(state);
+        return roomDocRef(code).set({ meta: split.meta, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+          .then(function () { pushEntriesDiff(split.entries); });
+      }
+    }).then(function () {
+      startListening(code);
+    }).catch(function (err) {
+      console.warn("建立/連線房號失敗", err);
+      roomStatus = "error";
+      updateSyncUI();
+    });
+  }
+
+  function joinRoom(code, onDone) {
+    roomDocRef(code).get().then(function (doc) {
+      if (!doc.exists) {
+        onDone && onDone("找不到這個代碼,請確認代碼是否正確。");
+        return;
+      }
+      roomCode = code;
+      localStorage.setItem(ROOM_KEY, code);
+      startListening(code);
+      onDone && onDone(null);
+    }).catch(function (err) {
+      console.warn("加入房號失敗", err);
+      onDone && onDone("連線失敗,請稍後再試。");
+    });
+  }
+
+  function pushStateToCloud() {
+    if (!cloudEnabled || !roomRef || applyingRemoteUpdate) return;
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = setTimeout(function () {
+      var split = splitStateForCloud(state);
+      roomRef.set({ meta: split.meta, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+        .catch(function (err) { console.warn("雲端儲存失敗(基本資料)", err); });
+      pushEntriesDiff(split.entries);
+    }, 600);
+  }
+
+  function initRoomSync() {
+    if (!cloudEnabled) return;
+    var saved = localStorage.getItem(ROOM_KEY);
+    if (saved) {
+      connectAsOwner(saved);
+    } else {
+      connectAsOwner(makeRoomCode());
+    }
+  }
+
+  function updateSyncUI() {
+    var el = document.getElementById("syncFootnote");
+    if (!el) return;
+    if (!cloudEnabled) {
+      el.textContent = "資料僅儲存在此瀏覽器(localStorage),換裝置或清除瀏覽器資料會遺失;請用「儀表板」頁的「資料備份」匯出/匯入。";
+      return;
+    }
+    if (roomStatus === "synced" && roomCode) {
+      el.textContent = "已連線共享,代碼:" + roomCode + "(在選單的「分享/共用」裡可查看或切換代碼)";
+    } else if (roomStatus === "connecting") {
+      el.textContent = "連線中…";
+    } else if (roomStatus === "error") {
+      el.textContent = "雲端連線失敗,暫時只使用本機資料,請檢查網路後重新整理。";
+    }
+  }
+
+  function openRoomModal() {
+    var html =
+      '<div class="field-hint" style="margin-bottom:6px;">目前代碼</div>' +
+      '<div style="display:flex; gap:8px; align-items:center; margin-bottom:16px;">' +
+      '<div style="flex:1; font-family:ui-monospace,monospace; font-size:20px; font-weight:700; letter-spacing:2px; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink);">' + (roomCode || "—") + '</div>' +
+      '<button class="btn btn-ghost" type="button" id="copyRoomCodeBtn">複製</button>' +
+      '</div>' +
+      '<div class="field-hint" style="margin-bottom:8px;">把這組代碼給對方(例如另一半),對方在這裡輸入同一組代碼,就會看到同一份、即時更新的資料。</div>' +
+      '<div class="field-hint" style="margin:16px 0 6px;">輸入別人的代碼來加入(這台裝置目前顯示的內容會換成該代碼的資料,原本代碼的資料不會被刪除,之後仍可換回來)</div>' +
+      '<div style="display:flex; gap:8px;">' +
+      '<input id="joinRoomInput" type="text" placeholder="輸入代碼" maxlength="12" style="flex:1; font-family:ui-monospace,monospace; text-transform:uppercase; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink);" />' +
+      '<button class="btn btn-primary" type="button" id="joinRoomBtn">加入</button>' +
+      '</div>';
+    var overlay = openModal(html, { title: "分享 / 共用資料" });
+    overlay.querySelector("#copyRoomCodeBtn").addEventListener("click", function () {
+      if (!roomCode) return;
+      var done = function () { showMessage("已複製代碼:" + roomCode); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(roomCode).then(done, done);
+      } else { done(); }
+    });
+    overlay.querySelector("#joinRoomBtn").addEventListener("click", function () {
+      var code = normalizeRoomCode(overlay.querySelector("#joinRoomInput").value);
+      if (!code) { showMessage("請先輸入代碼。"); return; }
+      showConfirm("確定要切換到代碼「" + code + "」嗎?這台裝置畫面會改成顯示該代碼的共用資料。", function () {
+        joinRoom(code, function (err) {
+          if (err) { showMessage(err); return; }
+          closeTopModal();
+          showMessage("已加入代碼:" + code);
+        });
+      });
+    });
+  }
+
   function activeData() {
     if (!state.activeBabyId) return null;
     return state.perBaby[state.activeBabyId];
@@ -1732,6 +2010,9 @@
     html += '<div class="baby-dropdown-divider"></div>';
     html += '<div class="baby-dropdown-action" data-action="export"><svg><use href="#ic-download"></use></svg><span>匯出資料</span></div>';
     html += '<div class="baby-dropdown-action" data-action="import"><svg><use href="#ic-upload"></use></svg><span>匯入資料</span></div>';
+    if (cloudEnabled) {
+      html += '<div class="baby-dropdown-action" data-action="share"><svg><use href="#ic-upload"></use></svg><span>分享 / 共用資料</span></div>';
+    }
     dd.innerHTML = html;
     dd.querySelectorAll("[data-switch]").forEach(function (el) {
       el.addEventListener("click", function () {
@@ -1752,6 +2033,9 @@
     }
     dd.querySelector('[data-action="export"]').addEventListener("click", function () { dd.classList.remove("open"); doExport(); });
     dd.querySelector('[data-action="import"]').addEventListener("click", function () { dd.classList.remove("open"); openImportModal(); });
+    if (cloudEnabled) {
+      dd.querySelector('[data-action="share"]').addEventListener("click", function () { dd.classList.remove("open"); openRoomModal(); });
+    }
   }
 
   function openConfirmModal(message, onConfirm) {
@@ -3257,5 +3541,7 @@
     ensureBabyBucket(state.activeBabyId);
     renderAll();
   }
+  updateSyncUI();
+  initRoomSync();
 })();
 </script>

@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 只允許存取符合房號格式(4-12 碼英數字)的文件,
+    // 等於「知道房號才能讀寫該房間資料」,其他路徑一律拒絕。
+    match /rooms/{roomCode} {
+      allow read, write: if roomCode.matches('^[A-Z0-9]{4,12}$');
+    }
+  }
+}
