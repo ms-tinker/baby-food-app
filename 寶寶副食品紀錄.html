@@ -1695,6 +1695,20 @@
         return roomRef.set({ meta: split.meta, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
           .then(function () { pushEntriesDiff(split.entries); });
       }
+      // 房間已存在:如果雲端的紀錄數量明顯比這台裝置少(例如先前同步失敗過),
+      // 代表雲端資料不完整,先把本機資料補回去,避免等下開始監聽時,
+      // 畫面被不完整的雲端資料覆蓋掉。
+      return roomRef.collection("entries").get().then(function (snap) {
+        var localCount = 0;
+        Object.keys(state.perBaby).forEach(function (bid) {
+          localCount += (state.perBaby[bid].entries || []).length;
+        });
+        if (snap.size < localCount) {
+          var split2 = splitStateForCloud(state);
+          lastPushedEntries = {};
+          return pushEntriesDiff(split2.entries);
+        }
+      });
     }).then(function () {
       startListening(code);
     }).catch(function (err) {
