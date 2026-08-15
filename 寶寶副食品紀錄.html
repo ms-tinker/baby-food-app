@@ -1684,14 +1684,15 @@
   function connectAsOwner(code) {
     roomStatus = "connecting";
     updateSyncUI();
-    roomDocRef(code).get().then(function (doc) {
+    roomRef = roomDocRef(code); // 提前設定,讓下面的 pushEntriesDiff 拿得到 roomRef
+    roomRef.get().then(function (doc) {
       roomCode = code;
       localStorage.setItem(ROOM_KEY, code);
       if (!doc.exists) {
         // 全新房號:用這台裝置現有的資料當作起點
         lastPushedEntries = {};
         var split = splitStateForCloud(state);
-        return roomDocRef(code).set({ meta: split.meta, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+        return roomRef.set({ meta: split.meta, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
           .then(function () { pushEntriesDiff(split.entries); });
       }
     }).then(function () {
@@ -1768,7 +1769,10 @@
       '<div style="display:flex; gap:8px;">' +
       '<input id="joinRoomInput" type="text" placeholder="輸入代碼" maxlength="12" style="flex:1; font-family:ui-monospace,monospace; text-transform:uppercase; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink);" />' +
       '<button class="btn btn-primary" type="button" id="joinRoomBtn">加入</button>' +
-      '</div>';
+      '</div>' +
+      '<div class="baby-dropdown-divider" style="margin:16px 0;"></div>' +
+      '<div class="field-hint" style="margin-bottom:8px;">如果對方加入代碼後看不到資料(例如同步異常),可以按這裡把這台裝置目前的資料強制重新上傳一次。</div>' +
+      '<button class="btn btn-ghost" type="button" id="forceResyncBtn" style="width:100%;justify-content:center;">重新上傳這台裝置的資料到雲端</button>';
     var overlay = openModal(html, { title: "分享 / 共用資料" });
     overlay.querySelector("#copyRoomCodeBtn").addEventListener("click", function () {
       if (!roomCode) return;
@@ -1788,6 +1792,26 @@
         });
       });
     });
+    overlay.querySelector("#forceResyncBtn").addEventListener("click", function () {
+      showConfirm("確定要用這台裝置目前的資料,覆蓋雲端上代碼「" + roomCode + "」的紀錄內容嗎?", function () {
+        forceResyncEntries();
+      });
+    });
+  }
+
+  function forceResyncEntries() {
+    if (!cloudEnabled || !roomRef) { showMessage("尚未連線,請稍後再試。"); return; }
+    var split = splitStateForCloud(state);
+    lastPushedEntries = {};
+    roomRef.set({ meta: split.meta, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+      .then(function () {
+        pushEntriesDiff(split.entries);
+        showMessage("已重新上傳這台裝置的資料到雲端。");
+      })
+      .catch(function (err) {
+        console.warn("重新上傳失敗", err);
+        showMessage("重新上傳失敗,請檢查網路後再試一次。");
+      });
   }
 
   function activeData() {
