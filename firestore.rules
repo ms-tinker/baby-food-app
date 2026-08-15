@@ -5,6 +5,10 @@ service cloud.firestore {
     // 等於「知道房號才能讀寫該房間資料」,其他路徑一律拒絕。
     match /rooms/{roomCode} {
       allow read, write: if roomCode.matches('^[A-Z0-9]{4,12}$');
+      // 紀錄(含照片)存在子集合裡,要另外授權才能讀寫,不會自動繼承上面的規則
+      match /entries/{entryId} {
+        allow read, write: if roomCode.matches('^[A-Z0-9]{4,12}$');
+      }
     }
   }
 }
