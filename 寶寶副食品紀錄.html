@@ -149,6 +149,10 @@
   .day-empty-hint { font-size: 12px; color: var(--ink-faint); }
   .day-add-btn { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; border: 1.5px dashed var(--line); background: transparent; color: var(--ink-soft); font-size: 17px; cursor: pointer; align-self: center; }
   .day-add-btn:hover { border-color: var(--accent); color: var(--accent-ink); }
+  .chip-copy-btn { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; border: none; background: transparent; color: var(--ink-soft); font-size: 13px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .chip-copy-btn:hover { color: var(--accent-ink); background: var(--accent-soft); }
+  .copy-date-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .copy-date-row input[type="date"] { flex: 1; height: 38px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; font-size: 13px; background: var(--bg); color: var(--ink); }
 
   /* ---------- Month grid ---------- */
   .month-dow-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px; }
@@ -220,6 +224,10 @@
   .weight-row input.weight-input { width: 80px; height: 38px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; font-size: 13px; background: var(--bg); color: var(--ink); }
   .weight-row select.unit-select { width: 92px; height: 38px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 8px; padding: 0 22px 0 8px; line-height: normal; font-size: 12.5px; color: var(--ink); background-color: var(--bg); -webkit-appearance: none; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%); background-position: calc(100% - 12px) center, calc(100% - 8px) center; background-size: 4px 4px, 4px 4px; background-repeat: no-repeat; }
   .weight-remove { border: none; background: var(--surface-2); width: 24px; height: 24px; border-radius: 50%; color: var(--ink-soft); cursor: pointer; font-size: 12px; }
+  .weight-row-total { background: var(--surface-2); border-radius: 8px; margin-bottom: 4px; }
+  .weight-row-total .weight-row-name { color: var(--accent-ink); }
+  .weight-total-icon { font-size: 15px; text-align: center; font-weight: 700; color: var(--ink-soft); }
+  .weight-list.total-mode-active .weight-row:not(.weight-row-total) .weight-input { opacity: .45; }
   .manage-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 600; }
   .manage-row:last-child { border-bottom: none; }
 
@@ -2518,7 +2526,8 @@
         }).join("");
         return '<div class="day-chip" data-edit-entry="' + en.id + '">' +
           '<div class="chip-foods-row">' + foodsRow + '</div>' +
-          '<div class="chip-status-row">' + entryLoveAllergyIcons(en) + "</div></div>";
+          '<div class="chip-status-row">' + entryLoveAllergyIcons(en) + "</div>" +
+          '<button type="button" class="chip-copy-btn" data-copy-entry="' + en.id + '" aria-label="複製這筆紀錄到別天" title="複製到別天">⧉</button></div>';
       }).join("");
       return '<div class="day-row' + (isToday ? " is-today" : "") + '" data-date="' + ds + '">' +
         '<div class="day-date"><span class="dow">週' + DOW[dObj.getDay()] + '</span><span class="num">' + dObj.getDate() + '</span><span class="mon">' + (dObj.getMonth() + 1) + '月</span></div>' +
@@ -2536,6 +2545,73 @@
         var entry = d.entries.find(function (e) { return e.id === chip.getAttribute("data-edit-entry"); });
         if (entry) openEntryModal(entry.date, entry);
       });
+    });
+    list.querySelectorAll("[data-copy-entry]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var entry = d.entries.find(function (en) { return en.id === btn.getAttribute("data-copy-entry"); });
+        if (entry) openCopyEntryModal(entry);
+      });
+    });
+  }
+
+  function openCopyEntryModal(entry) {
+    var foods = allFoods();
+    var bodyHTML =
+      '<div class="field"><div class="field-label">選擇要複製的食材(點選切換)</div>' +
+      '<div class="food-option-grid" id="copyFoodGrid">' +
+      entry.foods.map(function (sf) {
+        var f = foods[sf.foodId] || { name: "未知食材", icon: "ic-food-generic" };
+        return '<div class="food-option selected" data-food="' + sf.foodId + '"><svg><use href="#' + f.icon + '"></use></svg><span>' + escapeHtml(f.name) + "</span></div>";
+      }).join("") + "</div></div>" +
+      '<div class="field"><div class="field-label">複製到哪些日期</div><div id="copyDateList"></div>' +
+      '<button class="icon-choice-add" type="button" id="copyAddDate">＋ 新增日期</button></div>' +
+      '<div class="modal-actions"><button class="btn btn-primary" type="button" id="copyConfirm">複製</button></div>';
+    var overlay = openModal(bodyHTML, { title: "複製食材到別天" });
+
+    overlay.querySelector("#copyFoodGrid").addEventListener("click", function (e) {
+      var opt = e.target.closest(".food-option");
+      if (opt) opt.classList.toggle("selected");
+    });
+
+    function addDateRow(value) {
+      var row = document.createElement("div");
+      row.className = "copy-date-row";
+      row.innerHTML = '<input type="date" class="copy-date-input" value="' + (value || "") + '">' +
+        '<button type="button" class="weight-remove" data-remove-date>✕</button>';
+      overlay.querySelector("#copyDateList").appendChild(row);
+      row.querySelector("[data-remove-date]").addEventListener("click", function () {
+        if (overlay.querySelectorAll(".copy-date-row").length > 1) row.remove();
+      });
+    }
+    addDateRow(addDaysStr(entry.date, 1));
+    overlay.querySelector("#copyAddDate").addEventListener("click", function () { addDateRow(""); });
+
+    overlay.querySelector("#copyConfirm").addEventListener("click", function () {
+      var selectedFoodIds = Array.prototype.map.call(overlay.querySelectorAll("#copyFoodGrid .food-option.selected"), function (o) { return o.getAttribute("data-food"); });
+      if (!selectedFoodIds.length) { showMessage("請至少選擇一項食材"); return; }
+      var targetDates = Array.prototype.map.call(overlay.querySelectorAll(".copy-date-input"), function (i) { return i.value; }).filter(function (v) { return v; });
+      if (!targetDates.length) { showMessage("請至少選擇一個目標日期"); return; }
+      var d = activeData();
+      targetDates.forEach(function (ds) {
+        d.entries.push({
+          id: "entry_" + uid(),
+          date: ds,
+          foods: entry.foods.filter(function (sf) { return selectedFoodIds.indexOf(sf.foodId) !== -1; })
+            .map(function (sf) { return { foodId: sf.foodId, amount: sf.amount, unit: sf.unit }; }),
+          totalAmount: entry.totalAmount != null ? entry.totalAmount : null,
+          totalUnit: entry.totalUnit || null,
+          loveId: null,
+          textureId: null,
+          allergyIds: [],
+          note: "",
+          photos: [],
+          createdAt: Date.now()
+        });
+      });
+      saveState(); closeTopModal();
+      renderCalendar(); renderTrial(); renderDashboard();
+      showMessage("已複製到 " + targetDates.length + " 個日期");
     });
   }
 
@@ -2632,7 +2708,11 @@
       '<button class="icon-choice-add" type="button" id="addFoodBtn" style="margin-top:8px;">＋ 新增自訂食材</button>';
   }
 
-  function buildWeightListHTML(mode, selectedFoods) {
+  function totalModeActive(mode, comboTotal) {
+    return mode === "combo" && !!comboTotal && comboTotal.amount != null && comboTotal.amount !== "" && !isNaN(comboTotal.amount);
+  }
+
+  function buildWeightListHTML(mode, selectedFoods, comboTotal) {
     var foods = allFoods();
     if (!selectedFoods.length) {
       return '<div class="field-hint" style="margin-top:8px;">' + (mode === "combo" ? "請從上方選擇要一起記錄的食材" : "請從上方選擇食材") + "</div>";
@@ -2640,18 +2720,26 @@
     var units = unitOptions();
     var d = activeData();
     var allUnitsLookup = DEFAULT_UNIT.concat((d && d.customUnit) || []);
-    return '<div class="weight-list">' + selectedFoods.map(function (sf) {
+    function unitOptionsHtmlFor(selectedUnit) {
+      var unitList = units.some(function (u) { return u.id === selectedUnit; })
+        ? units
+        : units.concat(allUnitsLookup.filter(function (u) { return u.id === selectedUnit; }));
+      return unitList.map(function (u) {
+        return '<option value="' + u.id + '"' + (u.id === selectedUnit ? " selected" : "") + '>' + escapeHtml(u.label) + "</option>";
+      }).join("") + '<option value="__add_custom__">＋ 新增單位</option>';
+    }
+    var active = totalModeActive(mode, comboTotal);
+    var totalRowHtml = mode === "combo"
+      ? '<div class="weight-row weight-row-total"><span class="weight-total-icon">Σ</span><span class="weight-row-name">總數量</span>' +
+        '<input type="number" min="0" step="1" class="weight-input" id="comboTotalAmount" placeholder="總數量" value="' + (comboTotal && comboTotal.amount != null ? comboTotal.amount : "") + '">' +
+        '<select class="unit-select" id="comboTotalUnit">' + unitOptionsHtmlFor(comboTotal ? comboTotal.unit : defaultUnitId()) + "</select><span></span></div>"
+      : "";
+    return '<div class="weight-list' + (active ? " total-mode-active" : "") + '">' + totalRowHtml + selectedFoods.map(function (sf) {
       var f = foods[sf.foodId] || { name: "未知食材", icon: "ic-food-generic" };
       var au = foodAmountUnit(sf);
-      var unitList = units.some(function (u) { return u.id === au.unit; })
-        ? units
-        : units.concat(allUnitsLookup.filter(function (u) { return u.id === au.unit; }));
-      var unitOptionsHtml = unitList.map(function (u) {
-        return '<option value="' + u.id + '"' + (u.id === au.unit ? " selected" : "") + '>' + escapeHtml(u.label) + "</option>";
-      }).join("") + '<option value="__add_custom__">＋ 新增單位</option>';
       return '<div class="weight-row"><svg><use href="#' + f.icon + '"></use></svg><span class="weight-row-name">' + escapeHtml(f.name) + '</span>' +
-        '<input type="number" min="0" step="1" class="weight-input" data-weight-for="' + sf.foodId + '" placeholder="數量" value="' + (au.amount != null ? au.amount : "") + '">' +
-        '<select class="unit-select" data-unit-for="' + sf.foodId + '">' + unitOptionsHtml + '</select>' +
+        '<input type="number" min="0" step="1" class="weight-input" data-weight-for="' + sf.foodId + '" placeholder="數量" value="' + (au.amount != null ? au.amount : "") + '"' + (active ? " disabled" : "") + '>' +
+        '<select class="unit-select" data-unit-for="' + sf.foodId + '">' + unitOptionsHtmlFor(au.unit) + '</select>' +
         (mode === "combo" ? '<button type="button" class="weight-remove" data-remove-food="' + sf.foodId + '">✕</button>' : "") +
         "</div>";
     }).join("") + "</div>";
@@ -2673,6 +2761,7 @@
     pendingPhotos = existingEntry ? (existingEntry.photos || []).slice() : [];
     var entryMode = existingEntry && existingEntry.foods && existingEntry.foods.length > 1 ? "combo" : "single";
     var selectedFoods = existingEntry ? existingEntry.foods.map(function (f) { var au = foodAmountUnit(f); return { foodId: f.foodId, amount: au.amount, unit: au.unit }; }) : [];
+    var comboTotal = { amount: existingEntry && existingEntry.totalAmount != null ? existingEntry.totalAmount : null, unit: (existingEntry && existingEntry.totalUnit) || defaultUnitId() };
     var selLove = existingEntry ? existingEntry.loveId : null;
     var selTex = existingEntry ? existingEntry.textureId : null;
     var selAllergy = existingEntry ? entryAllergyIds(existingEntry).slice() : [];
@@ -2700,7 +2789,7 @@
     function renderFoodSection() {
       var wrap = overlay.querySelector("#foodSection");
       var ids = selectedFoods.map(function (f) { return f.foodId; });
-      wrap.innerHTML = buildFoodTreeHTML(ids) + buildWeightListHTML(entryMode, selectedFoods);
+      wrap.innerHTML = buildFoodTreeHTML(ids) + buildWeightListHTML(entryMode, selectedFoods, comboTotal);
       wrap.querySelectorAll(".food-option").forEach(function (opt) {
         opt.addEventListener("click", function () {
           var fid = opt.getAttribute("data-food");
@@ -2720,14 +2809,14 @@
           renderFoodSection();
         });
       });
-      wrap.querySelectorAll(".weight-input").forEach(function (inp) {
+      wrap.querySelectorAll(".weight-input[data-weight-for]").forEach(function (inp) {
         inp.addEventListener("input", function () {
           var fid = inp.getAttribute("data-weight-for");
           var sf = selectedFoods.find(function (f) { return f.foodId === fid; });
           if (sf) sf.amount = inp.value ? Number(inp.value) : null;
         });
       });
-      wrap.querySelectorAll(".unit-select").forEach(function (sel) {
+      wrap.querySelectorAll(".unit-select[data-unit-for]").forEach(function (sel) {
         sel.addEventListener("change", function () {
           var fid = sel.getAttribute("data-unit-for");
           var sf = selectedFoods.find(function (f) { return f.foodId === fid; });
@@ -2735,14 +2824,43 @@
           if (sel.value === "__add_custom__") {
             openAddOptionModal("unit", function (newId) {
               sf.unit = newId;
+              if (entryMode === "combo") selectedFoods.forEach(function (f) { f.unit = newId; });
               renderFoodSection();
             });
             sel.value = sf.unit || "unit_g";
             return;
           }
           sf.unit = sel.value;
+          if (entryMode === "combo") {
+            selectedFoods.forEach(function (f) { f.unit = sel.value; });
+            renderFoodSection();
+          }
         });
       });
+      var comboTotalAmountInput = wrap.querySelector("#comboTotalAmount");
+      if (comboTotalAmountInput) {
+        comboTotalAmountInput.addEventListener("input", function () {
+          comboTotal.amount = comboTotalAmountInput.value ? Number(comboTotalAmountInput.value) : null;
+          var listEl = wrap.querySelector(".weight-list");
+          var active = totalModeActive(entryMode, comboTotal);
+          listEl.classList.toggle("total-mode-active", active);
+          wrap.querySelectorAll(".weight-input[data-weight-for]").forEach(function (inp) { inp.disabled = active; });
+        });
+      }
+      var comboTotalUnitSelect = wrap.querySelector("#comboTotalUnit");
+      if (comboTotalUnitSelect) {
+        comboTotalUnitSelect.addEventListener("change", function () {
+          if (comboTotalUnitSelect.value === "__add_custom__") {
+            openAddOptionModal("unit", function (newId) {
+              comboTotal.unit = newId;
+              renderFoodSection();
+            });
+            comboTotalUnitSelect.value = comboTotal.unit || "unit_g";
+            return;
+          }
+          comboTotal.unit = comboTotalUnitSelect.value;
+        });
+      }
       wrap.querySelectorAll("[data-remove-food]").forEach(function (btn) {
         btn.addEventListener("click", function () {
           var fid = btn.getAttribute("data-remove-food");
@@ -2869,10 +2987,13 @@
     overlay.querySelector("#entrySave").addEventListener("click", function () {
       if (!selectedFoods.length) { showMessage("請選擇食材"); return; }
       var d = activeData();
+      var useTotal = totalModeActive(entryMode, comboTotal);
       var payload = {
         id: existingEntry ? existingEntry.id : "entry_" + uid(),
         date: overlay.querySelector("#entryDate").value || dateStr,
-        foods: selectedFoods.map(function (f) { return { foodId: f.foodId, amount: f.amount, unit: f.unit }; }),
+        foods: selectedFoods.map(function (f) { return { foodId: f.foodId, amount: useTotal ? null : f.amount, unit: f.unit }; }),
+        totalAmount: useTotal ? comboTotal.amount : null,
+        totalUnit: useTotal ? comboTotal.unit : null,
         loveId: state_selected.love,
         textureId: state_selected.tex,
         allergyIds: (state_selected.allergy || []).slice(),

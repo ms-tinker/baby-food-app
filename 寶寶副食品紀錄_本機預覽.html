@@ -154,6 +154,10 @@
   .day-empty-hint { font-size: 12px; color: var(--ink-faint); }
   .day-add-btn { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; border: 1.5px dashed var(--line); background: transparent; color: var(--ink-soft); font-size: 17px; cursor: pointer; align-self: center; }
   .day-add-btn:hover { border-color: var(--accent); color: var(--accent-ink); }
+  .chip-copy-btn { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; border: none; background: transparent; color: var(--ink-soft); font-size: 13px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .chip-copy-btn:hover { color: var(--accent-ink); background: var(--accent-soft); }
+  .copy-date-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .copy-date-row input[type="date"] { flex: 1; height: 38px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; font-size: 13px; background: var(--bg); color: var(--ink); }
 
   /* ---------- Month grid ---------- */
   .month-dow-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px; }
@@ -225,6 +229,10 @@
   .weight-row input.weight-input { width: 80px; height: 38px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; font-size: 13px; background: var(--bg); color: var(--ink); }
   .weight-row select.unit-select { width: 92px; height: 38px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 8px; padding: 0 22px 0 8px; line-height: normal; font-size: 12.5px; color: var(--ink); background-color: var(--bg); -webkit-appearance: none; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%); background-position: calc(100% - 12px) center, calc(100% - 8px) center; background-size: 4px 4px, 4px 4px; background-repeat: no-repeat; }
   .weight-remove { border: none; background: var(--surface-2); width: 24px; height: 24px; border-radius: 50%; color: var(--ink-soft); cursor: pointer; font-size: 12px; }
+  .weight-row-total { background: var(--surface-2); border-radius: 8px; margin-bottom: 4px; }
+  .weight-row-total .weight-row-name { color: var(--accent-ink); }
+  .weight-total-icon { font-size: 15px; text-align: center; font-weight: 700; color: var(--ink-soft); }
+  .weight-list.total-mode-active .weight-row:not(.weight-row-total) .weight-input { opacity: .45; }
   .manage-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 600; }
   .manage-row:last-child { border-bottom: none; }
 
@@ -480,7 +488,7 @@
     <div class="card" id="guideContainer"></div>
   </section>
 
-  <div class="footnote">資料僅儲存在此瀏覽器(localStorage),換裝置或清除瀏覽器資料會遺失;請用「儀表板」頁的「資料備份」匯出/匯入。</div>
+  <div class="footnote" id="syncFootnote">資料僅儲存在此瀏覽器(localStorage),換裝置或清除瀏覽器資料會遺失;請用「儀表板」頁的「資料備份」匯出/匯入。</div>
 </div>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -1158,6 +1166,24 @@
 </defs>
 </svg>
 
+<!-- ============ Firebase 雲端同步設定 ============
+     1. 到 https://console.firebase.google.com 建立專案 → 開啟 Firestore Database
+     2. 註冊網頁 App,把拿到的 config 貼到下面取代 YOUR_ 開頭的值
+     3. 沒填 config 之前,app 會自動退回「只存本機」模式,不影響現有功能
+-->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+  var firebaseConfig = {
+    apiKey: "AIzaSyAxjdbmROrt_zypfbMmFMwINMBUDmCJ8L8",
+    authDomain: "baby-food-app-a7c97.firebaseapp.com",
+    projectId: "baby-food-app-a7c97",
+    storageBucket: "baby-food-app-a7c97.firebasestorage.app",
+    messagingSenderId: "327274149502",
+    appId: "1:327274149502:web:1b35516c26710cc9124a2f"
+  };
+</script>
+
 <script>
 (function () {
   "use strict";
@@ -1516,7 +1542,305 @@
   function saveState() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
     catch (e) { console.warn("儲存失敗,可能是瀏覽器容量已滿", e); }
+    pushStateToCloud();
   }
+
+  /* ============ 雲端共享(房號)============
+     每個「房號」對應 Firestore 裡:
+       rooms/{code}            → 基本資料(寶寶清單、自訂項目、設定…不含照片)
+       rooms/{code}/entries/*  → 每一筆紀錄各自一份文件(含照片),避免單一文件超過 Firestore 1MB 上限
+     沒有房號的訪客會自動建立一個只屬於自己的新房號(不影響任何人),
+     要跟別人共用資料,就是把房號告訴對方,對方在「分享/共用」選單裡輸入加入。
+  */
+  var ROOM_KEY = "bbFoodApp_room";
+  var cloudEnabled = !!(window.firebase && firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf("YOUR_") !== 0);
+  var db = null;
+  if (cloudEnabled) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  }
+  var roomCode = null;
+  var roomRef = null;
+  var unsubscribeRoom = null;
+  var unsubscribeEntries = null;
+  var applyingRemoteUpdate = false;
+  var cloudSaveTimer = null;
+  var roomStatus = "offline"; // offline | connecting | synced | error
+  var lastPushedEntries = null; // entryId -> entry(含 babyId),用來跟下次存檔比對差異
+
+  function makeRoomCode() {
+    var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 避開容易混淆的 0/O/1/I
+    var s = "";
+    for (var i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return s;
+  }
+  function normalizeRoomCode(raw) {
+    return (raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+  }
+  function roomDocRef(code) { return db.collection("rooms").doc(code); }
+
+  // 把 state 拆成「基本資料(meta)」跟「攤平的紀錄陣列(entries,各自帶 babyId)」
+  function splitStateForCloud(s) {
+    var meta = { babies: s.babies, activeBabyId: s.activeBabyId, perBaby: {} };
+    var entries = [];
+    Object.keys(s.perBaby).forEach(function (babyId) {
+      var bucket = s.perBaby[babyId];
+      var metaBucket = {};
+      Object.keys(bucket).forEach(function (k) {
+        if (k !== "entries") metaBucket[k] = bucket[k];
+      });
+      meta.perBaby[babyId] = metaBucket;
+      (bucket.entries || []).forEach(function (e) {
+        var withBaby = { babyId: babyId };
+        Object.keys(e).forEach(function (k) { withBaby[k] = e[k]; });
+        entries.push(withBaby);
+      });
+    });
+    return { meta: meta, entries: entries };
+  }
+
+  // 把 meta + entries 子集合的內容,合併回 app 用的 state 結構
+  function mergeCloudIntoState(meta, entriesMap) {
+    var s = { babies: meta.babies || [], activeBabyId: meta.activeBabyId || null, perBaby: {} };
+    Object.keys(meta.perBaby || {}).forEach(function (babyId) {
+      var bucket = {};
+      var metaBucket = meta.perBaby[babyId];
+      Object.keys(metaBucket).forEach(function (k) { bucket[k] = metaBucket[k]; });
+      bucket.entries = [];
+      s.perBaby[babyId] = bucket;
+    });
+    Object.keys(entriesMap).forEach(function (id) {
+      var e = entriesMap[id];
+      var bucket = s.perBaby[e.babyId];
+      if (!bucket) return;
+      var clean = {};
+      Object.keys(e).forEach(function (k) { if (k !== "babyId") clean[k] = e[k]; });
+      bucket.entries.push(clean);
+    });
+    return s;
+  }
+
+  // 依 500 筆一批的限制,把一堆 set/delete 操作分批 commit
+  function commitInChunks(ops, size) {
+    var i = 0;
+    function next() {
+      if (i >= ops.length) return;
+      var batch = db.batch();
+      ops.slice(i, i + size).forEach(function (op) {
+        if (op.type === "set") batch.set(op.ref, op.data);
+        else batch.delete(op.ref);
+      });
+      i += size;
+      batch.commit().then(next).catch(function (err) { console.warn("批次寫入失敗", err); });
+    }
+    next();
+  }
+
+  // 比對這次的 entries 跟上次推上雲端的版本,只寫入真的有變動的那幾筆
+  function pushEntriesDiff(entries) {
+    var nextMap = {};
+    entries.forEach(function (e) { nextMap[e.id] = e; });
+    var prevMap = lastPushedEntries || {};
+    var ops = [];
+    Object.keys(nextMap).forEach(function (id) {
+      var e = nextMap[id];
+      var prevJSON = prevMap[id] ? JSON.stringify(prevMap[id]) : null;
+      if (prevJSON !== JSON.stringify(e)) {
+        ops.push({ type: "set", ref: roomRef.collection("entries").doc(id), data: e });
+      }
+    });
+    Object.keys(prevMap).forEach(function (id) {
+      if (!nextMap[id]) ops.push({ type: "delete", ref: roomRef.collection("entries").doc(id) });
+    });
+    lastPushedEntries = nextMap;
+    if (ops.length) commitInChunks(ops, 400);
+  }
+
+  function startListening(code) {
+    if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
+    if (unsubscribeEntries) { unsubscribeEntries(); unsubscribeEntries = null; }
+    roomRef = roomDocRef(code);
+    var remoteMeta = null, remoteEntriesMap = null;
+
+    function applyRemoteIfReady() {
+      if (!remoteMeta || !remoteEntriesMap) return;
+      roomStatus = "synced";
+      updateSyncUI();
+      applyingRemoteUpdate = true;
+      state = mergeCloudIntoState(remoteMeta, remoteEntriesMap);
+      lastPushedEntries = remoteEntriesMap;
+      if (state.activeBabyId) ensureBabyBucket(state.activeBabyId);
+      renderAll();
+      applyingRemoteUpdate = false;
+    }
+    function onError(err) {
+      console.warn("同步失敗", err);
+      roomStatus = "error";
+      updateSyncUI();
+    }
+
+    unsubscribeRoom = roomRef.onSnapshot(function (doc) {
+      var data = doc.data();
+      if (!data || !data.meta) return;
+      remoteMeta = data.meta;
+      applyRemoteIfReady();
+    }, onError);
+
+    unsubscribeEntries = roomRef.collection("entries").onSnapshot(function (snap) {
+      var map = {};
+      snap.forEach(function (d) { map[d.id] = d.data(); });
+      remoteEntriesMap = map;
+      applyRemoteIfReady();
+    }, onError);
+  }
+
+  function connectAsOwner(code) {
+    roomStatus = "connecting";
+    updateSyncUI();
+    roomRef = roomDocRef(code); // 提前設定,讓下面的 pushEntriesDiff 拿得到 roomRef
+    roomRef.get().then(function (doc) {
+      roomCode = code;
+      localStorage.setItem(ROOM_KEY, code);
+      if (!doc.exists) {
+        // 全新房號:用這台裝置現有的資料當作起點
+        lastPushedEntries = {};
+        var split = splitStateForCloud(state);
+        return roomRef.set({ meta: split.meta, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+          .then(function () { pushEntriesDiff(split.entries); });
+      }
+      // 房間已存在:如果雲端的紀錄數量明顯比這台裝置少(例如先前同步失敗過),
+      // 代表雲端資料不完整,先把本機資料補回去,避免等下開始監聽時,
+      // 畫面被不完整的雲端資料覆蓋掉。
+      return roomRef.collection("entries").get().then(function (snap) {
+        var localCount = 0;
+        Object.keys(state.perBaby).forEach(function (bid) {
+          localCount += (state.perBaby[bid].entries || []).length;
+        });
+        if (snap.size < localCount) {
+          var split2 = splitStateForCloud(state);
+          lastPushedEntries = {};
+          return pushEntriesDiff(split2.entries);
+        }
+      });
+    }).then(function () {
+      startListening(code);
+    }).catch(function (err) {
+      console.warn("建立/連線房號失敗", err);
+      roomStatus = "error";
+      updateSyncUI();
+    });
+  }
+
+  function joinRoom(code, onDone) {
+    roomDocRef(code).get().then(function (doc) {
+      if (!doc.exists) {
+        onDone && onDone("找不到這個代碼,請確認代碼是否正確。");
+        return;
+      }
+      roomCode = code;
+      localStorage.setItem(ROOM_KEY, code);
+      startListening(code);
+      onDone && onDone(null);
+    }).catch(function (err) {
+      console.warn("加入房號失敗", err);
+      onDone && onDone("連線失敗,請稍後再試。");
+    });
+  }
+
+  function pushStateToCloud() {
+    if (!cloudEnabled || !roomRef || applyingRemoteUpdate) return;
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = setTimeout(function () {
+      var split = splitStateForCloud(state);
+      roomRef.set({ meta: split.meta, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+        .catch(function (err) { console.warn("雲端儲存失敗(基本資料)", err); });
+      pushEntriesDiff(split.entries);
+    }, 600);
+  }
+
+  function initRoomSync() {
+    if (!cloudEnabled) return;
+    var saved = localStorage.getItem(ROOM_KEY);
+    if (saved) {
+      connectAsOwner(saved);
+    } else {
+      connectAsOwner(makeRoomCode());
+    }
+  }
+
+  function updateSyncUI() {
+    var el = document.getElementById("syncFootnote");
+    if (!el) return;
+    if (!cloudEnabled) {
+      el.textContent = "資料僅儲存在此瀏覽器(localStorage),換裝置或清除瀏覽器資料會遺失;請用「儀表板」頁的「資料備份」匯出/匯入。";
+      return;
+    }
+    if (roomStatus === "synced" && roomCode) {
+      el.textContent = "已連線共享,代碼:" + roomCode + "(在選單的「分享/共用」裡可查看或切換代碼)";
+    } else if (roomStatus === "connecting") {
+      el.textContent = "連線中…";
+    } else if (roomStatus === "error") {
+      el.textContent = "雲端連線失敗,暫時只使用本機資料,請檢查網路後重新整理。";
+    }
+  }
+
+  function openRoomModal() {
+    var html =
+      '<div class="field-hint" style="margin-bottom:6px;">目前代碼</div>' +
+      '<div style="display:flex; gap:8px; align-items:center; margin-bottom:16px;">' +
+      '<div style="flex:1; font-family:ui-monospace,monospace; font-size:20px; font-weight:700; letter-spacing:2px; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink);">' + (roomCode || "—") + '</div>' +
+      '<button class="btn btn-ghost" type="button" id="copyRoomCodeBtn">複製</button>' +
+      '</div>' +
+      '<div class="field-hint" style="margin-bottom:8px;">把這組代碼給對方(例如另一半),對方在這裡輸入同一組代碼,就會看到同一份、即時更新的資料。</div>' +
+      '<div class="field-hint" style="margin:16px 0 6px;">輸入別人的代碼來加入(這台裝置目前顯示的內容會換成該代碼的資料,原本代碼的資料不會被刪除,之後仍可換回來)</div>' +
+      '<div style="display:flex; gap:8px;">' +
+      '<input id="joinRoomInput" type="text" placeholder="輸入代碼" maxlength="12" style="flex:1; font-family:ui-monospace,monospace; text-transform:uppercase; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink);" />' +
+      '<button class="btn btn-primary" type="button" id="joinRoomBtn">加入</button>' +
+      '</div>' +
+      '<div class="baby-dropdown-divider" style="margin:16px 0;"></div>' +
+      '<div class="field-hint" style="margin-bottom:8px;">如果對方加入代碼後看不到資料(例如同步異常),可以按這裡把這台裝置目前的資料強制重新上傳一次。</div>' +
+      '<button class="btn btn-ghost" type="button" id="forceResyncBtn" style="width:100%;justify-content:center;">重新上傳這台裝置的資料到雲端</button>';
+    var overlay = openModal(html, { title: "分享 / 共用資料" });
+    overlay.querySelector("#copyRoomCodeBtn").addEventListener("click", function () {
+      if (!roomCode) return;
+      var done = function () { showMessage("已複製代碼:" + roomCode); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(roomCode).then(done, done);
+      } else { done(); }
+    });
+    overlay.querySelector("#joinRoomBtn").addEventListener("click", function () {
+      var code = normalizeRoomCode(overlay.querySelector("#joinRoomInput").value);
+      if (!code) { showMessage("請先輸入代碼。"); return; }
+      showConfirm("確定要切換到代碼「" + code + "」嗎?這台裝置畫面會改成顯示該代碼的共用資料。", function () {
+        joinRoom(code, function (err) {
+          if (err) { showMessage(err); return; }
+          closeTopModal();
+          showMessage("已加入代碼:" + code);
+        });
+      });
+    });
+    overlay.querySelector("#forceResyncBtn").addEventListener("click", function () {
+      showConfirm("確定要用這台裝置目前的資料,覆蓋雲端上代碼「" + roomCode + "」的紀錄內容嗎?", function () {
+        forceResyncEntries();
+      });
+    });
+  }
+
+  function forceResyncEntries() {
+    if (!cloudEnabled || !roomRef) { showMessage("尚未連線,請稍後再試。"); return; }
+    var split = splitStateForCloud(state);
+    lastPushedEntries = {};
+    roomRef.set({ meta: split.meta, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+      .then(function () {
+        pushEntriesDiff(split.entries);
+        showMessage("已重新上傳這台裝置的資料到雲端。");
+      })
+      .catch(function (err) {
+        console.warn("重新上傳失敗", err);
+        showMessage("重新上傳失敗,請檢查網路後再試一次。");
+      });
+  }
+
   function activeData() {
     if (!state.activeBabyId) return null;
     return state.perBaby[state.activeBabyId];
@@ -1737,6 +2061,9 @@
     html += '<div class="baby-dropdown-divider"></div>';
     html += '<div class="baby-dropdown-action" data-action="export"><svg><use href="#ic-download"></use></svg><span>匯出資料</span></div>';
     html += '<div class="baby-dropdown-action" data-action="import"><svg><use href="#ic-upload"></use></svg><span>匯入資料</span></div>';
+    if (cloudEnabled) {
+      html += '<div class="baby-dropdown-action" data-action="share"><svg><use href="#ic-upload"></use></svg><span>分享 / 共用資料</span></div>';
+    }
     dd.innerHTML = html;
     dd.querySelectorAll("[data-switch]").forEach(function (el) {
       el.addEventListener("click", function () {
@@ -1757,6 +2084,9 @@
     }
     dd.querySelector('[data-action="export"]').addEventListener("click", function () { dd.classList.remove("open"); doExport(); });
     dd.querySelector('[data-action="import"]').addEventListener("click", function () { dd.classList.remove("open"); openImportModal(); });
+    if (cloudEnabled) {
+      dd.querySelector('[data-action="share"]').addEventListener("click", function () { dd.classList.remove("open"); openRoomModal(); });
+    }
   }
 
   function openConfirmModal(message, onConfirm) {
@@ -1979,6 +2309,7 @@
     { tab: "calendar", selector: ".brand", title: "嗨, 歡迎使用寶寶副食品紀錄", text: "先跟你說兩件事<ul><li>已經幫你準備好 271 種常見食材, 分成五大類十九小類</li><li>資料只存在你的瀏覽器裡, 不會上傳到任何地方</li></ul>準備好了嗎, 我們開始逛逛吧" },
     { tab: "calendar", selector: "#babyPillBtn", title: "寶寶切換與管理", text: "點這裡會跳出選單, 可以做這些事<ul><li>切換寶寶, 支援多寶寶, 紀錄不會互相干擾唷</li><li>新增或編輯寶寶資料</li><li>管理自訂項目:刪除自己新增過的食材/選項, 計量單位還能拖曳排序或把預設單位隱藏起來</li></ul>" },
     { tab: "calendar", selector: "#babyPillBtn", title: "資料備份", text: "選單裡也有匯出匯入功能<ul><li>匯出會存成一個 JSON 檔案</li><li>匯入是「合併」不是覆蓋, 不用怕資料被洗掉</li></ul>資料只存在瀏覽器裡, 記得養成定期備份的習慣喔" },
+    { tab: "calendar", selector: "#babyPillBtn", title: "分享 / 共用資料", text: "選單裡還有「分享 / 共用資料」, 可以跟另一半或朋友即時共用同一份紀錄<ul><li>每個人一打開都會自動有一組專屬代碼, 資料不會互通</li><li>把你的代碼給對方, 對方輸入同一組代碼就能加入, 之後兩邊即時同步</li><li>單純分享網址給別人, 對方不會自動看到你的資料, 除非你把代碼也給他</li></ul>" },
     { tab: "calendar", selector: '[data-tab="calendar"]', title: "每日紀錄", text: "這裡是你每天記錄寶寶吃了什麼的地方, 也是你會最常用到的模組" },
     { tab: "calendar", selector: "#calViewToggle", title: "週 / 月檢視", text: "可以切換週或月檢視, 搭配左右箭頭翻頁, 迷路的話按「回到今天」就能瞬間跳回來" },
     { tab: "calendar", selector: "#dayList", title: "新增與編輯紀錄", text: "每一天右邊有「+」可以新增紀錄, 記錄過的日子會顯示食材小卡片, 點卡片就能編輯或刪除, 接下來帶你看看新增紀錄長什麼樣子" },
@@ -2200,7 +2531,8 @@
         }).join("");
         return '<div class="day-chip" data-edit-entry="' + en.id + '">' +
           '<div class="chip-foods-row">' + foodsRow + '</div>' +
-          '<div class="chip-status-row">' + entryLoveAllergyIcons(en) + "</div></div>";
+          '<div class="chip-status-row">' + entryLoveAllergyIcons(en) + "</div>" +
+          '<button type="button" class="chip-copy-btn" data-copy-entry="' + en.id + '" aria-label="複製這筆紀錄到別天" title="複製到別天">⧉</button></div>';
       }).join("");
       return '<div class="day-row' + (isToday ? " is-today" : "") + '" data-date="' + ds + '">' +
         '<div class="day-date"><span class="dow">週' + DOW[dObj.getDay()] + '</span><span class="num">' + dObj.getDate() + '</span><span class="mon">' + (dObj.getMonth() + 1) + '月</span></div>' +
@@ -2218,6 +2550,73 @@
         var entry = d.entries.find(function (e) { return e.id === chip.getAttribute("data-edit-entry"); });
         if (entry) openEntryModal(entry.date, entry);
       });
+    });
+    list.querySelectorAll("[data-copy-entry]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var entry = d.entries.find(function (en) { return en.id === btn.getAttribute("data-copy-entry"); });
+        if (entry) openCopyEntryModal(entry);
+      });
+    });
+  }
+
+  function openCopyEntryModal(entry) {
+    var foods = allFoods();
+    var bodyHTML =
+      '<div class="field"><div class="field-label">選擇要複製的食材(點選切換)</div>' +
+      '<div class="food-option-grid" id="copyFoodGrid">' +
+      entry.foods.map(function (sf) {
+        var f = foods[sf.foodId] || { name: "未知食材", icon: "ic-food-generic" };
+        return '<div class="food-option selected" data-food="' + sf.foodId + '"><svg><use href="#' + f.icon + '"></use></svg><span>' + escapeHtml(f.name) + "</span></div>";
+      }).join("") + "</div></div>" +
+      '<div class="field"><div class="field-label">複製到哪些日期</div><div id="copyDateList"></div>' +
+      '<button class="icon-choice-add" type="button" id="copyAddDate">＋ 新增日期</button></div>' +
+      '<div class="modal-actions"><button class="btn btn-primary" type="button" id="copyConfirm">複製</button></div>';
+    var overlay = openModal(bodyHTML, { title: "複製食材到別天" });
+
+    overlay.querySelector("#copyFoodGrid").addEventListener("click", function (e) {
+      var opt = e.target.closest(".food-option");
+      if (opt) opt.classList.toggle("selected");
+    });
+
+    function addDateRow(value) {
+      var row = document.createElement("div");
+      row.className = "copy-date-row";
+      row.innerHTML = '<input type="date" class="copy-date-input" value="' + (value || "") + '">' +
+        '<button type="button" class="weight-remove" data-remove-date>✕</button>';
+      overlay.querySelector("#copyDateList").appendChild(row);
+      row.querySelector("[data-remove-date]").addEventListener("click", function () {
+        if (overlay.querySelectorAll(".copy-date-row").length > 1) row.remove();
+      });
+    }
+    addDateRow(addDaysStr(entry.date, 1));
+    overlay.querySelector("#copyAddDate").addEventListener("click", function () { addDateRow(""); });
+
+    overlay.querySelector("#copyConfirm").addEventListener("click", function () {
+      var selectedFoodIds = Array.prototype.map.call(overlay.querySelectorAll("#copyFoodGrid .food-option.selected"), function (o) { return o.getAttribute("data-food"); });
+      if (!selectedFoodIds.length) { showMessage("請至少選擇一項食材"); return; }
+      var targetDates = Array.prototype.map.call(overlay.querySelectorAll(".copy-date-input"), function (i) { return i.value; }).filter(function (v) { return v; });
+      if (!targetDates.length) { showMessage("請至少選擇一個目標日期"); return; }
+      var d = activeData();
+      targetDates.forEach(function (ds) {
+        d.entries.push({
+          id: "entry_" + uid(),
+          date: ds,
+          foods: entry.foods.filter(function (sf) { return selectedFoodIds.indexOf(sf.foodId) !== -1; })
+            .map(function (sf) { return { foodId: sf.foodId, amount: sf.amount, unit: sf.unit }; }),
+          totalAmount: entry.totalAmount != null ? entry.totalAmount : null,
+          totalUnit: entry.totalUnit || null,
+          loveId: null,
+          textureId: null,
+          allergyIds: [],
+          note: "",
+          photos: [],
+          createdAt: Date.now()
+        });
+      });
+      saveState(); closeTopModal();
+      renderCalendar(); renderTrial(); renderDashboard();
+      showMessage("已複製到 " + targetDates.length + " 個日期");
     });
   }
 
@@ -2314,7 +2713,11 @@
       '<button class="icon-choice-add" type="button" id="addFoodBtn" style="margin-top:8px;">＋ 新增自訂食材</button>';
   }
 
-  function buildWeightListHTML(mode, selectedFoods) {
+  function totalModeActive(mode, comboTotal) {
+    return mode === "combo" && !!comboTotal && comboTotal.amount != null && comboTotal.amount !== "" && !isNaN(comboTotal.amount);
+  }
+
+  function buildWeightListHTML(mode, selectedFoods, comboTotal) {
     var foods = allFoods();
     if (!selectedFoods.length) {
       return '<div class="field-hint" style="margin-top:8px;">' + (mode === "combo" ? "請從上方選擇要一起記錄的食材" : "請從上方選擇食材") + "</div>";
@@ -2322,18 +2725,26 @@
     var units = unitOptions();
     var d = activeData();
     var allUnitsLookup = DEFAULT_UNIT.concat((d && d.customUnit) || []);
-    return '<div class="weight-list">' + selectedFoods.map(function (sf) {
+    function unitOptionsHtmlFor(selectedUnit) {
+      var unitList = units.some(function (u) { return u.id === selectedUnit; })
+        ? units
+        : units.concat(allUnitsLookup.filter(function (u) { return u.id === selectedUnit; }));
+      return unitList.map(function (u) {
+        return '<option value="' + u.id + '"' + (u.id === selectedUnit ? " selected" : "") + '>' + escapeHtml(u.label) + "</option>";
+      }).join("") + '<option value="__add_custom__">＋ 新增單位</option>';
+    }
+    var active = totalModeActive(mode, comboTotal);
+    var totalRowHtml = mode === "combo"
+      ? '<div class="weight-row weight-row-total"><span class="weight-total-icon">Σ</span><span class="weight-row-name">總數量</span>' +
+        '<input type="number" min="0" step="1" class="weight-input" id="comboTotalAmount" placeholder="總數量" value="' + (comboTotal && comboTotal.amount != null ? comboTotal.amount : "") + '">' +
+        '<select class="unit-select" id="comboTotalUnit">' + unitOptionsHtmlFor(comboTotal ? comboTotal.unit : defaultUnitId()) + "</select><span></span></div>"
+      : "";
+    return '<div class="weight-list' + (active ? " total-mode-active" : "") + '">' + totalRowHtml + selectedFoods.map(function (sf) {
       var f = foods[sf.foodId] || { name: "未知食材", icon: "ic-food-generic" };
       var au = foodAmountUnit(sf);
-      var unitList = units.some(function (u) { return u.id === au.unit; })
-        ? units
-        : units.concat(allUnitsLookup.filter(function (u) { return u.id === au.unit; }));
-      var unitOptionsHtml = unitList.map(function (u) {
-        return '<option value="' + u.id + '"' + (u.id === au.unit ? " selected" : "") + '>' + escapeHtml(u.label) + "</option>";
-      }).join("") + '<option value="__add_custom__">＋ 新增單位</option>';
       return '<div class="weight-row"><svg><use href="#' + f.icon + '"></use></svg><span class="weight-row-name">' + escapeHtml(f.name) + '</span>' +
-        '<input type="number" min="0" step="1" class="weight-input" data-weight-for="' + sf.foodId + '" placeholder="數量" value="' + (au.amount != null ? au.amount : "") + '">' +
-        '<select class="unit-select" data-unit-for="' + sf.foodId + '">' + unitOptionsHtml + '</select>' +
+        '<input type="number" min="0" step="1" class="weight-input" data-weight-for="' + sf.foodId + '" placeholder="數量" value="' + (au.amount != null ? au.amount : "") + '"' + (active ? " disabled" : "") + '>' +
+        '<select class="unit-select" data-unit-for="' + sf.foodId + '">' + unitOptionsHtmlFor(au.unit) + '</select>' +
         (mode === "combo" ? '<button type="button" class="weight-remove" data-remove-food="' + sf.foodId + '">✕</button>' : "") +
         "</div>";
     }).join("") + "</div>";
@@ -2355,6 +2766,7 @@
     pendingPhotos = existingEntry ? (existingEntry.photos || []).slice() : [];
     var entryMode = existingEntry && existingEntry.foods && existingEntry.foods.length > 1 ? "combo" : "single";
     var selectedFoods = existingEntry ? existingEntry.foods.map(function (f) { var au = foodAmountUnit(f); return { foodId: f.foodId, amount: au.amount, unit: au.unit }; }) : [];
+    var comboTotal = { amount: existingEntry && existingEntry.totalAmount != null ? existingEntry.totalAmount : null, unit: (existingEntry && existingEntry.totalUnit) || defaultUnitId() };
     var selLove = existingEntry ? existingEntry.loveId : null;
     var selTex = existingEntry ? existingEntry.textureId : null;
     var selAllergy = existingEntry ? entryAllergyIds(existingEntry).slice() : [];
@@ -2382,7 +2794,7 @@
     function renderFoodSection() {
       var wrap = overlay.querySelector("#foodSection");
       var ids = selectedFoods.map(function (f) { return f.foodId; });
-      wrap.innerHTML = buildFoodTreeHTML(ids) + buildWeightListHTML(entryMode, selectedFoods);
+      wrap.innerHTML = buildFoodTreeHTML(ids) + buildWeightListHTML(entryMode, selectedFoods, comboTotal);
       wrap.querySelectorAll(".food-option").forEach(function (opt) {
         opt.addEventListener("click", function () {
           var fid = opt.getAttribute("data-food");
@@ -2402,14 +2814,14 @@
           renderFoodSection();
         });
       });
-      wrap.querySelectorAll(".weight-input").forEach(function (inp) {
+      wrap.querySelectorAll(".weight-input[data-weight-for]").forEach(function (inp) {
         inp.addEventListener("input", function () {
           var fid = inp.getAttribute("data-weight-for");
           var sf = selectedFoods.find(function (f) { return f.foodId === fid; });
           if (sf) sf.amount = inp.value ? Number(inp.value) : null;
         });
       });
-      wrap.querySelectorAll(".unit-select").forEach(function (sel) {
+      wrap.querySelectorAll(".unit-select[data-unit-for]").forEach(function (sel) {
         sel.addEventListener("change", function () {
           var fid = sel.getAttribute("data-unit-for");
           var sf = selectedFoods.find(function (f) { return f.foodId === fid; });
@@ -2417,14 +2829,43 @@
           if (sel.value === "__add_custom__") {
             openAddOptionModal("unit", function (newId) {
               sf.unit = newId;
+              if (entryMode === "combo") selectedFoods.forEach(function (f) { f.unit = newId; });
               renderFoodSection();
             });
             sel.value = sf.unit || "unit_g";
             return;
           }
           sf.unit = sel.value;
+          if (entryMode === "combo") {
+            selectedFoods.forEach(function (f) { f.unit = sel.value; });
+            renderFoodSection();
+          }
         });
       });
+      var comboTotalAmountInput = wrap.querySelector("#comboTotalAmount");
+      if (comboTotalAmountInput) {
+        comboTotalAmountInput.addEventListener("input", function () {
+          comboTotal.amount = comboTotalAmountInput.value ? Number(comboTotalAmountInput.value) : null;
+          var listEl = wrap.querySelector(".weight-list");
+          var active = totalModeActive(entryMode, comboTotal);
+          listEl.classList.toggle("total-mode-active", active);
+          wrap.querySelectorAll(".weight-input[data-weight-for]").forEach(function (inp) { inp.disabled = active; });
+        });
+      }
+      var comboTotalUnitSelect = wrap.querySelector("#comboTotalUnit");
+      if (comboTotalUnitSelect) {
+        comboTotalUnitSelect.addEventListener("change", function () {
+          if (comboTotalUnitSelect.value === "__add_custom__") {
+            openAddOptionModal("unit", function (newId) {
+              comboTotal.unit = newId;
+              renderFoodSection();
+            });
+            comboTotalUnitSelect.value = comboTotal.unit || "unit_g";
+            return;
+          }
+          comboTotal.unit = comboTotalUnitSelect.value;
+        });
+      }
       wrap.querySelectorAll("[data-remove-food]").forEach(function (btn) {
         btn.addEventListener("click", function () {
           var fid = btn.getAttribute("data-remove-food");
@@ -2551,10 +2992,13 @@
     overlay.querySelector("#entrySave").addEventListener("click", function () {
       if (!selectedFoods.length) { showMessage("請選擇食材"); return; }
       var d = activeData();
+      var useTotal = totalModeActive(entryMode, comboTotal);
       var payload = {
         id: existingEntry ? existingEntry.id : "entry_" + uid(),
         date: overlay.querySelector("#entryDate").value || dateStr,
-        foods: selectedFoods.map(function (f) { return { foodId: f.foodId, amount: f.amount, unit: f.unit }; }),
+        foods: selectedFoods.map(function (f) { return { foodId: f.foodId, amount: useTotal ? null : f.amount, unit: f.unit }; }),
+        totalAmount: useTotal ? comboTotal.amount : null,
+        totalUnit: useTotal ? comboTotal.unit : null,
         loveId: state_selected.love,
         textureId: state_selected.tex,
         allergyIds: (state_selected.allergy || []).slice(),
@@ -3055,16 +3499,25 @@
     var stamp = today.getFullYear() + pad2(today.getMonth() + 1) + pad2(today.getDate());
     var filename = "寶寶副食品紀錄_備份_" + stamp + ".json";
     var data = JSON.stringify(state, null, 2);
+    var blobUrl = null;
+    try { blobUrl = URL.createObjectURL(new Blob([data], { type: "application/json" })); } catch (e) {}
 
     function showManualExportModal() {
+      var downloadLinkHtml = blobUrl
+        ? '<a href="' + blobUrl + '" download="' + filename + '" class="btn btn-primary" style="display:flex;justify-content:center;text-decoration:none;margin-bottom:10px;">下載 JSON 檔案</a>'
+        : "";
       var html =
-        '<div class="field-hint" style="margin-bottom:8px;">如果沒有自動跳出下載視窗, 也沒關係, 按下面的「複製內容」, 貼到記事本或任何文字編輯器裡, 存成 .json 檔案就完成備份囉, 或是直接把複製的內容貼到「匯入資料」裡的貼上欄位, 也可以喔</div>' +
+        '<div class="field-hint" style="margin-bottom:8px;">按「下載 JSON 檔案」把備份存到手機的「檔案」App, 之後就能用「匯入資料」裡的「從檔案匯入」讀取; 資料量大時複製貼上容易在中途被截斷, 建議優先用下載檔案的方式備份</div>' +
+        downloadLinkHtml +
         '<textarea id="exportTextarea" readonly style="width:100%; height:220px; box-sizing:border-box; font-family:ui-monospace,monospace; font-size:11px; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink);"></textarea>' +
         '<div class="modal-actions" style="margin-top:12px;"><button class="btn btn-ghost" type="button" data-close-export>關閉</button><button class="btn btn-primary" type="button" id="copyExportBtn" style="flex:1;">複製內容</button></div>';
       var overlay = openModal(html, { title: "匯出備份 · " + filename });
       var ta = overlay.querySelector("#exportTextarea");
       ta.value = data;
-      overlay.querySelector("[data-close-export]").addEventListener("click", closeTopModal);
+      overlay.querySelector("[data-close-export]").addEventListener("click", function () {
+        if (blobUrl) { URL.revokeObjectURL(blobUrl); blobUrl = null; }
+        closeTopModal();
+      });
       var copyBtn = overlay.querySelector("#copyExportBtn");
       copyBtn.addEventListener("click", function () {
         ta.focus(); ta.select();
@@ -3083,30 +3536,15 @@
       });
     }
 
-    function fallbackDownload() {
-      try {
-        var blob = new Blob([data], { type: "application/json" });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } catch (e) {}
-      showManualExportModal();
-    }
-
     if (window.claude && window.claude.downloads) {
       window.claude.downloads.save({ filename: filename, data: data }).catch(function (err) {
         if (err && err.code === "declined") return;
-        fallbackDownload();
+        showManualExportModal();
       });
       return;
     }
 
-    fallbackDownload();
+    showManualExportModal();
   }
 
   function mergeArraysById(a, b) {
@@ -3268,6 +3706,8 @@
     ensureBabyBucket(state.activeBabyId);
     renderAll();
   }
+  updateSyncUI();
+  initRoomSync();
 })();
 </script>
 
